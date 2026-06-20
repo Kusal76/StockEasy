@@ -1,0 +1,8 @@
+{
+    "crons": [
+        {
+            "path": "/api/admin/system/nightly-backup",
+            "schedule": "0 0 * * *"
+        }
+    ]
+}

@@ -1,26 +1,147 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
+  --font-heading: var(--font-inter);
+  --font-sans: 'Inter', 'Geist', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Geist Mono', monospace;
+
+  /* Core tokens mapping to CSS variables */
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+
+  /* Radius scale */
+  --radius-sm: 0.125rem;
+  --radius-DEFAULT: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ☀️ LIGHT MODE: Enterprise SaaS (Zoho-Inspired) */
+:root {
+  /* Surface System: Slightly deeper gray background to make white cards pop */
+  --background: #F3F4F6;
+  --foreground: #111827;
+  /* Near-black for maximum crispness */
+
+  --card: #FFFFFF;
+  /* Pure white cards */
+  --card-foreground: #111827;
+  --popover: #FFFFFF;
+  --popover-foreground: #111827;
+
+  /* Primary Theme */
+  --primary: #059669;
+  --primary-foreground: #FFFFFF;
+
+  /* Secondary & Muted */
+  --secondary: #F9FAFB;
+  --secondary-foreground: #1F2937;
+
+  --muted: #F3F4F6;
+  /* CRITICAL FIX: Darkened from light gray to medium slate for readable labels */
+  --muted-foreground: #4B5563;
+
+  --accent: #E5E7EB;
+  --accent-foreground: #111827;
+
+  /* Alerts: Darkened slightly for better contrast on white/light backgrounds */
+  --destructive: #DC2626;
+  --warning: #D97706;
+  /* Deeper Amber so the text/icons don't look washed out */
+  --info: #2563EB;
+
+  /* Crisp, subtle borders */
+  --border: #E5E7EB;
+  --border-hover: #D1D5DB;
+  --input: #E5E7EB;
+  --ring: #059669;
+
+  --radius: 0.5rem;
+
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(229, 231, 235, 0.8);
+}
+
+/* 🌙 DARK MODE: Enterprise Charcoal Ecosystem */
+.dark {
+  --background: #051424;
+  --foreground: #f8fafc;
+
+  --card: #0d1c2d;
+  --card-foreground: #f8fafc;
+  --popover: #122131;
+  --popover-foreground: #f8fafc;
+
+  --primary: #50C878;
+  /* Your original neon green */
+  --primary-foreground: #003919;
+
+  --secondary: #1c2b3c;
+  --secondary-foreground: #f8fafc;
+
+  --muted: #122131;
+  --muted-foreground: #94a3b8;
+
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+
+  --destructive: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.15);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #50C878;
+
+  --glass-bg: rgba(5, 20, 36, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+
+  html {
+    @apply font-sans scroll-smooth;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+  }
+
+  .glow-primary {
+    box-shadow: 0px 0px 20px rgba(80, 200, 120, 0.3);
+  }
 }
