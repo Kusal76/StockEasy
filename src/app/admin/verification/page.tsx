@@ -37,62 +37,64 @@ export default function VerificationQueuePage() {
     };
 
     return (
-        <div className="max-w-6xl space-y-8 animate-in fade-in duration-500">
+        <div className="max-w-6xl space-y-6 sm:space-y-8 animate-in fade-in duration-500 pb-10">
 
             {/* Page Header */}
             <div>
-                <h1 className="text-3xl font-bold text-foreground mb-2 tracking-tight flex items-center gap-3">
-                    <ShieldCheck className="w-8 h-8 text-primary" /> Verification Queue
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1.5 sm:mb-2 tracking-tight flex items-center gap-2 sm:gap-3">
+                    <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-primary" /> Verification Queue
                 </h1>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-xs sm:text-sm">
                     {isLoading ? "Checking queue..." : `${queue.length} shops awaiting compliance approval, oldest first.`}
                 </p>
             </div>
 
             {/* Queue Table */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm min-h-[400px] transition-colors duration-300">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm flex flex-col min-h-[400px] transition-colors duration-300">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
                         <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
-                        <p className="font-mono text-sm uppercase tracking-widest">Scanning Database...</p>
+                        <p className="font-mono text-sm uppercase tracking-widest font-bold">Scanning Database...</p>
                     </div>
                 ) : queue.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
-                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                    <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground p-6 text-center">
+                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 border border-border">
                             <Clock className="w-8 h-8 text-muted-foreground/50" />
                         </div>
                         <p className="text-lg font-bold text-foreground">Queue is Empty</p>
                         <p className="text-sm mt-1">All pharmacy registrations have been processed.</p>
                     </div>
                 ) : (
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-border bg-muted/20 text-xs uppercase tracking-wider text-muted-foreground font-mono">
-                                <th className="p-5 font-medium">Pharmacy Name</th>
-                                <th className="p-5 font-medium">License No.</th>
-                                <th className="p-5 font-medium">Submitted On</th>
-                                <th className="p-5 font-medium text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border/50">
-                            {queue.map((shop) => (
-                                <tr key={shop.id} className="hover:bg-muted/50 transition-colors group">
-                                    <td className="p-5 font-bold text-foreground">{shop.name || "Unnamed Shop"}</td>
-                                    {/* Updated to use license_number */}
-                                    <td className="p-5 text-sm text-foreground font-mono">{shop.license_number || "N/A"}</td>
-                                    <td className="p-5 text-sm text-muted-foreground">{formatDate(shop.created_at)}</td>
-                                    <td className="p-5 text-center">
-                                        <Link
-                                            href={`/admin/verification/${shop.id}`}
-                                            className="inline-flex items-center justify-center px-6 py-2 bg-background border border-border text-foreground rounded-lg hover:border-primary hover:text-primary transition-colors text-sm font-medium shadow-sm"
-                                        >
-                                            Review
-                                        </Link>
-                                    </td>
+                    // FIX: Wrapped table in overflow container with min-width
+                    <div className="overflow-x-auto custom-scrollbar flex-1">
+                        <table className="w-full text-left border-collapse whitespace-nowrap min-w-[600px]">
+                            <thead>
+                                <tr className="border-b border-border bg-muted/30 text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground font-mono">
+                                    <th className="px-4 sm:px-6 py-4 font-bold">Pharmacy Name</th>
+                                    <th className="px-4 sm:px-6 py-4 font-bold">License No.</th>
+                                    <th className="px-4 sm:px-6 py-4 font-bold">Submitted On</th>
+                                    <th className="px-4 sm:px-6 py-4 font-bold text-right">Action</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-border/50">
+                                {queue.map((shop) => (
+                                    <tr key={shop.id} className="hover:bg-muted/50 transition-colors group">
+                                        <td className="px-4 sm:px-6 py-4 font-bold text-foreground text-sm">{shop.name || "Unnamed Shop"}</td>
+                                        <td className="px-4 sm:px-6 py-4 text-sm text-foreground font-mono">{shop.license_number || "N/A"}</td>
+                                        <td className="px-4 sm:px-6 py-4 text-sm text-muted-foreground">{formatDate(shop.created_at)}</td>
+                                        <td className="px-4 sm:px-6 py-4 text-right">
+                                            <Link
+                                                href={`/admin/verification/${shop.id}`}
+                                                className="inline-flex items-center justify-center px-4 sm:px-6 py-2 bg-background border border-border text-foreground rounded-lg hover:border-primary hover:text-primary transition-colors text-xs sm:text-sm font-bold shadow-sm"
+                                            >
+                                                Review
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
         </div>

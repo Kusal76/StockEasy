@@ -22,48 +22,47 @@ export function HeroSection() {
   }, [isVideoModalOpen]);
 
   return (
-    <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden bg-background transition-colors duration-300">
-      {/* Subtle enterprise grid background instead of massive neon glows */}
+    <section className="relative pt-28 pb-16 sm:pt-32 sm:pb-20 md:pt-40 md:pb-32 overflow-hidden bg-background transition-colors duration-300">
+      {/* Subtle enterprise grid background */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
 
       <div className="relative max-w-[1280px] mx-auto px-4 md:px-6 lg:px-16">
-        <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
 
-          {/* Left Content */}
-          <div className="space-y-8 animate-in slide-in-from-left-8 duration-700">
+          {/* Left Content - FIX: Centered on mobile, left-aligned on desktop */}
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-6 sm:space-y-8 animate-in slide-in-from-left-8 duration-700">
+
             {/* Status Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 border border-primary/20 bg-primary/10 rounded-full text-xs font-bold text-primary uppercase tracking-widest shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 border border-primary/20 bg-primary/10 rounded-full text-[10px] sm:text-xs font-bold text-primary uppercase tracking-widest shadow-sm">
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-primary animate-pulse" />
               Status: Optimized
             </div>
 
             {/* Headline */}
-            <h1 className="text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight text-foreground">
-              Stop losing money on <br />
-              <span className="text-destructive">
-                expired
-              </span> medicine.
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-[1.15] sm:leading-[1.1] tracking-tight text-foreground">
+              Stop losing money on <br className="hidden sm:block" />
+              <span className="text-destructive"> expired </span> medicine.
             </h1>
 
             {/* Description */}
-            <p className="text-lg text-muted-foreground max-w-xl leading-relaxed font-medium">
+            <p className="text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed font-medium px-2 sm:px-0">
               Precision medical inventory management driven by FEFO (First Expire, First Out) logic. Leverage AI insights to eliminate waste and maximize pharmacy profitability.
             </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-wrap gap-4 pt-4">
+            {/* CTA Buttons - FIX: 100% width on mobile, inline on sm+ screens */}
+            <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 sm:gap-4 pt-2 sm:pt-4">
               <a
                 href="/register"
-                className="group flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-all shadow-sm"
+                className="group flex items-center justify-center gap-2 w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-all shadow-sm text-sm sm:text-base"
               >
                 Register Your Shop
-                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 transition-transform group-hover:translate-x-1" />
               </a>
               <button
                 onClick={() => setIsVideoModalOpen(true)}
-                className="group flex items-center gap-2 px-8 py-4 bg-card border border-border text-foreground rounded-xl font-bold hover:bg-muted transition-all shadow-sm cursor-pointer"
+                className="group flex items-center justify-center gap-2 w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 bg-card border border-border text-foreground rounded-xl font-bold hover:bg-muted transition-all shadow-sm cursor-pointer text-sm sm:text-base"
               >
-                <Play className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                <Play className="w-4 h-4 sm:w-5 sm:h-5 text-primary group-hover:scale-110 transition-transform" />
                 View Demo
               </button>
             </div>
@@ -72,7 +71,7 @@ export function HeroSection() {
           {/* Right Content - Enterprise Dashboard Preview */}
           <div className="relative animate-in slide-in-from-right-8 duration-700 delay-150 fill-mode-both hidden lg:block">
 
-            {/* Floating Expiry Alert - Top Left (Untilted, structural) */}
+            {/* Floating Expiry Alert */}
             <div className="absolute -top-6 -left-6 z-20 bg-card border border-border shadow-xl rounded-xl px-4 py-3">
               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-1">Batch: Z180-F</p>
               <div className="flex items-center gap-2">
@@ -81,7 +80,7 @@ export function HeroSection() {
               </div>
             </div>
 
-            {/* Floating Batch Status - Bottom Right (Untilted, structural) */}
+            {/* Floating Batch Status */}
             <div className="absolute -bottom-6 -right-6 z-20 bg-card border border-border shadow-xl rounded-xl px-4 py-3">
               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-1">Batch: X982-A</p>
               <div className="flex items-center gap-2">
@@ -137,48 +136,47 @@ export function HeroSection() {
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
       {/* Cinematic Video Modal Overlay */}
       {isVideoModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-sm p-3 sm:p-4 md:p-6 animate-in fade-in duration-300">
           {/* Click outside background to close */}
           <div className="absolute inset-0 cursor-pointer" onClick={() => setIsVideoModalOpen(false)} />
 
-          <div className="relative w-full max-w-5xl bg-card rounded-2xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 z-10">
+          <div className="relative w-full max-w-5xl bg-card rounded-2xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 z-10 flex flex-col max-h-[90vh]">
 
             {/* Close Button */}
-            <div className="absolute top-4 right-4 z-20">
+            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20">
               <button
                 onClick={() => setIsVideoModalOpen(false)}
-                className="p-2 bg-background/80 hover:bg-destructive text-foreground hover:text-white rounded-full backdrop-blur-sm transition-all cursor-pointer border border-border"
+                className="p-1.5 sm:p-2 bg-background/80 hover:bg-destructive text-foreground hover:text-white rounded-full backdrop-blur-sm transition-all cursor-pointer border border-border shadow-sm"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
 
             {/* Video Player connected to Supabase */}
-            <div className="relative w-full aspect-video bg-black flex items-center justify-center">
+            <div className="relative w-full aspect-video bg-black flex items-center justify-center shrink-0">
               <video
                 controls
                 autoPlay
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain sm:object-cover"
               >
                 <source src={DEMO_VIDEO_URL} type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-6 border-t border-border bg-muted/20 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
-                <Play className="w-5 h-5 text-primary" />
+            {/* Modal Footer - FIX: Stack text and icon on mobile */}
+            <div className="p-4 sm:p-6 border-t border-border bg-muted/20 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 overflow-y-auto">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
+                <Play className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-foreground mb-1">StockEasy Platform Walkthrough</h3>
-                <p className="text-muted-foreground text-sm font-medium">A complete overview of clinical inventory management, FEFO tracking, and intelligent POS.</p>
+                <h3 className="text-base sm:text-xl font-bold text-foreground mb-0.5 sm:mb-1">StockEasy Platform Walkthrough</h3>
+                <p className="text-muted-foreground text-xs sm:text-sm font-medium">A complete overview of clinical inventory management, FEFO tracking, and intelligent POS.</p>
               </div>
             </div>
 
@@ -186,5 +184,5 @@ export function HeroSection() {
         </div>
       )}
     </section>
-  )
+  );
 }

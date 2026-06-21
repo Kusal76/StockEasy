@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import { Loader2, Search, CheckCircle2, Clock, Mail, User, ShieldAlert, ArrowRight, RefreshCw, Send, MessageSquare } from "lucide-react";
+import { Loader2, Search, CheckCircle2, Clock, Mail, User, ShieldAlert, ArrowRight, RefreshCw, Send, MessageSquare, X } from "lucide-react";
 
 interface Ticket {
     id: string; // The UUID from database
@@ -139,24 +139,24 @@ export default function AdminSupportInbox() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[80vh] text-muted-foreground transition-colors">
                 <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
-                <p className="font-mono text-sm tracking-widest uppercase">Loading Helpdesk...</p>
+                <p className="font-mono text-sm tracking-widest uppercase font-bold text-center px-4">Loading Helpdesk...</p>
             </div>
         );
     }
 
     return (
-        <div className="max-w-7xl mx-auto animate-in fade-in duration-500 pb-20 h-[calc(100vh-100px)] flex flex-col transition-colors">
+        <div className="max-w-7xl mx-auto animate-in fade-in duration-500 pb-10 sm:pb-20 h-auto md:h-[calc(100vh-100px)] flex flex-col transition-colors">
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pb-4 border-b border-border mb-6 shrink-0">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 pb-4 border-b border-border mb-4 sm:mb-6 shrink-0">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight">Support Helpdesk</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Manage, reply, and resolve tenant support tickets.</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Support Helpdesk</h1>
+                    <p className="text-muted-foreground text-xs sm:text-sm mt-1">Manage, reply, and resolve tenant support tickets.</p>
                 </div>
                 <button
                     onClick={verifyAdminAndFetchTickets}
                     disabled={isRefreshing}
-                    className="px-4 py-2 bg-card hover:bg-muted border border-border text-muted-foreground hover:text-foreground text-sm font-bold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm"
+                    className="w-full sm:w-auto px-4 py-2 bg-card hover:bg-muted border border-border text-muted-foreground hover:text-foreground text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm shrink-0"
                 >
                     <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
                     {isRefreshing ? "Syncing..." : "Sync Inbox"}
@@ -164,11 +164,11 @@ export default function AdminSupportInbox() {
             </div>
 
             {/* Main Split Interface */}
-            <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0">
+            <div className="flex-1 flex flex-col md:flex-row gap-4 sm:gap-6 md:min-h-0">
 
                 {/* LEFT PANE: Ticket List */}
-                <div className="w-full md:w-1/3 bg-card border border-border rounded-2xl shadow-sm flex flex-col overflow-hidden transition-colors">
-                    <div className="p-4 border-b border-border bg-muted/20 space-y-4">
+                <div className="w-full md:w-1/3 h-[400px] md:h-full bg-card border border-border rounded-2xl shadow-sm flex flex-col overflow-hidden transition-colors shrink-0 md:shrink">
+                    <div className="p-3 sm:p-4 border-b border-border bg-muted/20 space-y-3 sm:space-y-4">
                         <div className="relative">
                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                             <input
@@ -176,25 +176,26 @@ export default function AdminSupportInbox() {
                                 placeholder="Search ID, name, or email..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors shadow-sm"
+                                className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors shadow-sm placeholder:text-muted-foreground/50"
                             />
                         </div>
+                        {/* FIX: Tab switching now automatically closes any selected ticket */}
                         <div className="flex bg-background p-1 rounded-lg border border-border">
                             <button
-                                onClick={() => setStatusFilter("OPEN")}
-                                className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-colors cursor-pointer ${statusFilter === "OPEN" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                                onClick={() => { setStatusFilter("OPEN"); setSelectedTicket(null); }}
+                                className={`flex-1 text-[10px] sm:text-xs font-bold py-1.5 rounded-md transition-colors cursor-pointer ${statusFilter === "OPEN" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                             >
                                 Open
                             </button>
                             <button
-                                onClick={() => setStatusFilter("RESOLVED")}
-                                className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-colors cursor-pointer ${statusFilter === "RESOLVED" ? "bg-muted text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"}`}
+                                onClick={() => { setStatusFilter("RESOLVED"); setSelectedTicket(null); }}
+                                className={`flex-1 text-[10px] sm:text-xs font-bold py-1.5 rounded-md transition-colors cursor-pointer ${statusFilter === "RESOLVED" ? "bg-muted text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"}`}
                             >
                                 Resolved
                             </button>
                             <button
-                                onClick={() => setStatusFilter("ALL")}
-                                className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-colors cursor-pointer ${statusFilter === "ALL" ? "bg-muted text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"}`}
+                                onClick={() => { setStatusFilter("ALL"); setSelectedTicket(null); }}
+                                className={`flex-1 text-[10px] sm:text-xs font-bold py-1.5 rounded-md transition-colors cursor-pointer ${statusFilter === "ALL" ? "bg-muted text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"}`}
                             >
                                 All
                             </button>
@@ -203,7 +204,7 @@ export default function AdminSupportInbox() {
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
                         {filteredTickets.length === 0 ? (
-                            <div className="p-8 text-center text-muted-foreground text-sm">No tickets found.</div>
+                            <div className="p-8 text-center text-muted-foreground text-sm font-medium">No tickets found.</div>
                         ) : (
                             <div className="space-y-1">
                                 {filteredTickets.map(ticket => (
@@ -212,20 +213,24 @@ export default function AdminSupportInbox() {
                                         onClick={() => {
                                             setSelectedTicket(ticket);
                                             setAdminReplyText(""); // Clear text box when switching tickets
+                                            // Optional: Scroll to bottom pane on mobile
+                                            if (window.innerWidth < 768) {
+                                                setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+                                            }
                                         }}
-                                        className={`w-full text-left p-4 rounded-xl border transition-all cursor-pointer ${selectedTicket?.id === ticket.id ? 'bg-primary/5 border-primary/50' : 'bg-transparent border-transparent hover:bg-muted/50'}`}
+                                        className={`w-full text-left p-3 sm:p-4 rounded-xl border transition-all cursor-pointer ${selectedTicket?.id === ticket.id ? 'bg-primary/5 border-primary/50' : 'bg-transparent border-transparent hover:bg-muted/50'}`}
                                     >
                                         <div className="flex justify-between items-start mb-1">
-                                            <span className="font-mono text-xs font-bold text-foreground">{ticket.displayId}</span>
+                                            <span className="font-mono text-[10px] sm:text-xs font-bold text-foreground">{ticket.displayId}</span>
                                             {ticket.status === 'OPEN' ? (
                                                 <span className="w-2 h-2 rounded-full bg-warning animate-pulse shadow-sm" />
                                             ) : (
                                                 <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                                             )}
                                         </div>
-                                        <div className="text-sm font-bold text-foreground truncate">{ticket.name}</div>
-                                        <div className="text-xs text-muted-foreground truncate mb-2">{ticket.message}</div>
-                                        <div className="text-[10px] text-muted-foreground font-mono">{formatDate(ticket.created_at)}</div>
+                                        <div className="text-xs sm:text-sm font-bold text-foreground truncate">{ticket.name}</div>
+                                        <div className="text-[10px] sm:text-xs text-muted-foreground truncate mb-1.5 sm:mb-2">{ticket.message}</div>
+                                        <div className="text-[9px] sm:text-[10px] text-muted-foreground font-mono">{formatDate(ticket.created_at)}</div>
                                     </button>
                                 ))}
                             </div>
@@ -234,42 +239,51 @@ export default function AdminSupportInbox() {
                 </div>
 
                 {/* RIGHT PANE: Ticket Details & Reply Editor */}
-                <div className="w-full md:w-2/3 bg-card border border-border rounded-2xl shadow-sm flex flex-col overflow-hidden relative transition-colors">
+                <div className="w-full md:w-2/3 h-auto md:h-full bg-card border border-border rounded-2xl shadow-sm flex flex-col overflow-hidden relative transition-colors">
                     {!selectedTicket ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-                            <MessageSquare className="w-12 h-12 mb-4 opacity-20" />
-                            <p>Select a ticket from the inbox to view and respond.</p>
+                        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 text-center min-h-[300px]">
+                            <MessageSquare className="w-10 h-10 sm:w-12 sm:h-12 mb-4 opacity-20" />
+                            <p className="text-sm">Select a ticket from the inbox to view and respond.</p>
                         </div>
                     ) : (
-                        <div className="flex flex-col h-full">
+                        <div className="flex flex-col h-full max-h-[800px] md:max-h-none">
                             {/* Detailed Header */}
-                            <div className="p-6 border-b border-border bg-muted/20 flex justify-between items-start shrink-0">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <h2 className="text-xl font-bold text-foreground">{selectedTicket.displayId}</h2>
+                            <div className="p-4 sm:p-6 border-b border-border bg-muted/20 flex justify-between items-start shrink-0">
+                                <div className="min-w-0 pr-2">
+                                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                                        <h2 className="text-lg sm:text-xl font-bold text-foreground truncate">{selectedTicket.displayId}</h2>
                                         {selectedTicket.status === 'OPEN' ? (
-                                            <span className="px-2 py-0.5 bg-warning/10 border border-warning/20 text-warning text-[10px] font-bold uppercase rounded shadow-sm">Awaiting Reply</span>
+                                            <span className="px-2 py-0.5 bg-warning/10 border border-warning/20 text-warning text-[9px] sm:text-[10px] font-bold uppercase rounded shadow-sm shrink-0">Awaiting Reply</span>
                                         ) : (
-                                            <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-bold uppercase rounded shadow-sm">Resolved</span>
+                                            <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[9px] sm:text-[10px] font-bold uppercase rounded shadow-sm shrink-0">Resolved</span>
                                         )}
                                     </div>
-                                    <p className="text-xs font-mono text-muted-foreground">Submitted: {formatDate(selectedTicket.created_at)}</p>
+                                    <p className="text-[10px] sm:text-xs font-mono text-muted-foreground">Submitted: {formatDate(selectedTicket.created_at)}</p>
                                 </div>
+
+                                {/* FIX: Explicit Close Button to dismiss the ticket view */}
+                                <button
+                                    onClick={() => setSelectedTicket(null)}
+                                    className="p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors cursor-pointer shrink-0"
+                                    title="Close ticket"
+                                >
+                                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                                </button>
                             </div>
 
                             {/* Ticket Content Area */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-4 sm:space-y-6">
                                 {/* Sender Info Card */}
-                                <div className="p-4 bg-background border border-border rounded-xl grid grid-cols-2 gap-4 shadow-sm">
+                                <div className="p-3 sm:p-4 bg-background border border-border rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 shadow-sm">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground flex items-center gap-1.5"><User className="w-3 h-3" /> Sender Name</label>
-                                        <p className="text-sm font-bold text-foreground">{selectedTicket.name}</p>
+                                        <label className="text-[9px] sm:text-[10px] uppercase font-mono tracking-widest text-muted-foreground flex items-center gap-1.5"><User className="w-3 h-3" /> Sender Name</label>
+                                        <p className="text-xs sm:text-sm font-bold text-foreground truncate">{selectedTicket.name}</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground flex items-center gap-1.5"><Mail className="w-3 h-3" /> Email Address</label>
+                                        <label className="text-[9px] sm:text-[10px] uppercase font-mono tracking-widest text-muted-foreground flex items-center gap-1.5"><Mail className="w-3 h-3" /> Email Address</label>
                                         <div className="flex items-center gap-2">
-                                            <p className="text-sm font-medium text-foreground">{selectedTicket.email}</p>
-                                            <a href={`mailto:${selectedTicket.email}?subject=RE: Support Ticket ${selectedTicket.displayId}`} className="text-primary hover:bg-primary/10 p-1 rounded transition-colors" title="Reply via Email Client">
+                                            <p className="text-xs sm:text-sm font-medium text-foreground truncate">{selectedTicket.email}</p>
+                                            <a href={`mailto:${selectedTicket.email}?subject=RE: Support Ticket ${selectedTicket.displayId}`} className="text-primary hover:bg-primary/10 p-1 rounded transition-colors shrink-0" title="Reply via Email Client">
                                                 <Send className="w-3 h-3" />
                                             </a>
                                         </div>
@@ -278,9 +292,9 @@ export default function AdminSupportInbox() {
 
                                 {/* Message Body */}
                                 <div>
-                                    <h3 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wider">User Request / Issue</h3>
-                                    <div className="p-6 bg-muted/20 border border-border rounded-xl">
-                                        <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                                    <h3 className="text-xs sm:text-sm font-bold text-muted-foreground mb-2 sm:mb-3 uppercase tracking-wider">User Request / Issue</h3>
+                                    <div className="p-4 sm:p-6 bg-muted/20 border border-border rounded-xl">
+                                        <p className="text-foreground text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-medium">
                                             {selectedTicket.message}
                                         </p>
                                     </div>
@@ -289,21 +303,21 @@ export default function AdminSupportInbox() {
                                 {/* Dynamic Reply Section */}
                                 {selectedTicket.status === 'OPEN' ? (
                                     <div className="space-y-3 animate-in fade-in pt-4 border-t border-border">
-                                        <h3 className="text-sm font-bold text-primary mb-3 uppercase tracking-wider flex items-center gap-2">
-                                            <Send className="w-4 h-4" /> Draft Resolution
+                                        <h3 className="text-xs sm:text-sm font-bold text-primary mb-2 sm:mb-3 uppercase tracking-wider flex items-center gap-2">
+                                            <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Draft Resolution
                                         </h3>
                                         <textarea
                                             rows={5}
                                             value={adminReplyText}
                                             onChange={(e) => setAdminReplyText(e.target.value)}
                                             placeholder="Write your response to the user here. This will be sent directly to their email..."
-                                            className="w-full bg-background border border-primary/30 rounded-xl p-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none placeholder:text-muted-foreground shadow-sm transition-colors"
+                                            className="w-full bg-background border border-primary/30 rounded-xl p-3 sm:p-4 text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none placeholder:text-muted-foreground/70 shadow-sm transition-colors"
                                         />
                                         <div className="flex justify-end">
                                             <button
                                                 onClick={handleSendReply}
                                                 disabled={isResolving || !adminReplyText.trim()}
-                                                className="px-6 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-lg text-sm flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                                                className="w-full sm:w-auto px-6 py-2.5 sm:py-3 bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-lg text-sm flex justify-center items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
                                             >
                                                 {isResolving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                                                 Send Reply & Resolve
@@ -312,11 +326,11 @@ export default function AdminSupportInbox() {
                                     </div>
                                 ) : (
                                     <div className="space-y-3 animate-in fade-in pt-4 border-t border-border">
-                                        <h3 className="text-sm font-bold text-emerald-500 mb-3 uppercase tracking-wider flex items-center gap-2">
-                                            <ShieldAlert className="w-4 h-4" /> Administrative Resolution
+                                        <h3 className="text-xs sm:text-sm font-bold text-emerald-500 mb-2 sm:mb-3 uppercase tracking-wider flex items-center gap-2">
+                                            <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Administrative Resolution
                                         </h3>
-                                        <div className="p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl shadow-sm">
-                                            <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
+                                        <div className="p-4 sm:p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl shadow-sm">
+                                            <p className="text-foreground text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
                                                 {selectedTicket.admin_reply || "Ticket resolved without a text response."}
                                             </p>
                                         </div>

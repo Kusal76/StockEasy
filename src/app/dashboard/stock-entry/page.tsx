@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
-import { PackagePlus, Save, Loader2, Pill, Hash, IndianRupee, Percent, TriangleAlert, Plus, Truck } from "lucide-react";
+import { PackagePlus, Save, Loader2, Pill, Hash, IndianRupee, Percent, TriangleAlert, Plus, Truck, ChevronDown } from "lucide-react";
 
 interface CatalogMedicine {
     name: string;
@@ -27,6 +27,75 @@ const PLAN_LIMITS = {
     STARTER: { maxMeds: 5 },
     GROWTH: { maxMeds: 50 },
     PRO: { maxMeds: Infinity }
+};
+
+// Custom UI Component for the Filter Dropdown
+const FilterDropdown = ({
+    value,
+    options,
+    onChange,
+    icon: Icon,
+    className
+}: {
+    value: string,
+    options: { value: string, label: string }[],
+    onChange: (val: string) => void,
+    icon?: any,
+    className?: string
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedLabel = options.find((o) => o.value === value)?.label || value || "Select an option";
+
+    return (
+        <div className="relative w-full" ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className={className || "w-full bg-card border border-border rounded-xl flex items-center justify-between px-4 py-2.5 shadow-sm transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20"}
+            >
+                <div className="flex items-center gap-2 pr-4 truncate">
+                    {Icon && <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
+                    <span className={`text-sm font-bold truncate ${!value && options[0]?.value === "" ? "text-muted-foreground" : "text-foreground"}`}>
+                        {selectedLabel}
+                    </span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 mt-1.5 w-full bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="py-1 max-h-[200px] overflow-y-auto custom-scrollbar">
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-muted ${value === opt.value ? 'bg-primary/10 text-primary font-bold' : 'text-foreground font-medium'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default function StockEntryPage() {
@@ -230,20 +299,21 @@ export default function StockEntryPage() {
     const isMedsFull = catalog.length >= currentLimits.maxMeds;
 
     return (
-        <div className="max-w-5xl mx-auto animate-in fade-in duration-500 space-y-8 relative pb-10">
+        <div className="max-w-5xl mx-auto animate-in fade-in duration-500 space-y-6 sm:space-y-8 relative pb-10">
 
-            <div className="flex items-center justify-between">
+            {/* HEADER */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm">
-                        <PackagePlus className="w-6 h-6 text-primary" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm shrink-0">
+                        <PackagePlus className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold text-foreground tracking-tight mb-1">Inward Stock Entry</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mb-1">Inward Stock Entry</h1>
                         <p className="text-muted-foreground text-sm font-medium">Register new shipments into your live inventory.</p>
                     </div>
                 </div>
 
-                <div className="hidden md:flex items-center gap-2 bg-card border border-border px-4 py-2 rounded-xl shadow-sm">
+                <div className="flex items-center justify-center w-full md:w-auto gap-2 bg-card border border-border px-4 py-2 rounded-xl shadow-sm">
                     <span className="text-xs text-muted-foreground font-semibold">Plan:</span>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded border ${shopPlan === 'PRO' ? 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'bg-primary/10 text-primary border-primary/30'}`}>{shopPlan}</span>
                     <div className="text-[11px] font-mono ml-2 flex items-center gap-2">
@@ -255,21 +325,21 @@ export default function StockEntryPage() {
             </div>
 
             {successMessage && (
-                <div className="bg-primary/10 border border-primary/30 p-4 rounded-xl flex items-center gap-3 text-primary font-bold animate-in slide-in-from-top-2 shadow-sm">
-                    <Save className="w-5 h-5" /> {successMessage}
+                <div className="bg-primary/10 border border-primary/30 p-4 rounded-xl flex items-center gap-3 text-primary font-bold animate-in slide-in-from-top-2 shadow-sm text-sm sm:text-base">
+                    <Save className="w-5 h-5 shrink-0" /> {successMessage}
                 </div>
             )}
 
-            <form onSubmit={handleSave} className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden transition-colors">
-                <div className="p-8 space-y-8">
+            <form onSubmit={handleSave} className="bg-card border border-border rounded-2xl shadow-sm overflow-visible transition-colors">
+                <div className="p-5 sm:p-8 space-y-6 sm:space-y-8">
 
                     {/* SECTION 1: Product Identification */}
-                    <div>
-                        <h2 className="text-xs font-mono text-muted-foreground font-bold uppercase tracking-wider mb-5 flex items-center gap-2 pb-2 border-b border-border">
+                    <div className="relative z-20">
+                        <h2 className="text-[11px] sm:text-xs font-mono text-muted-foreground font-bold uppercase tracking-wider mb-4 sm:mb-5 flex items-center gap-2 pb-2 border-b border-border">
                             <Pill className="w-4 h-4" /> 1. Product Identification
                         </h2>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                     <label className="text-sm font-bold text-foreground">Medicine Name *</label>
@@ -282,7 +352,7 @@ export default function StockEntryPage() {
                                     value={formData.medicine_name}
                                     onChange={e => handleMedicineSelect(e.target.value)}
                                     placeholder="e.g. Paracetamol 500mg"
-                                    className={`w-full px-4 py-3 bg-secondary hover:bg-muted border ${isMedsFull && isNewMedicine ? 'border-destructive/50 focus:border-destructive text-destructive' : 'border-transparent hover:border-border focus:border-primary'} rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all duration-200 placeholder:text-muted-foreground/40 font-medium shadow-sm`}
+                                    className={`w-full px-4 py-2.5 sm:py-3 bg-secondary hover:bg-muted border ${isMedsFull && isNewMedicine ? 'border-destructive/50 focus:border-destructive text-destructive' : 'border-transparent hover:border-border focus:border-primary'} rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all duration-200 placeholder:text-muted-foreground/40 font-medium shadow-sm`}
                                 />
                                 <datalist id="medicine-catalog-list">
                                     {catalog.map(med => (
@@ -292,120 +362,99 @@ export default function StockEntryPage() {
                                 {catalog.length === 0 && <p className="text-xs text-primary/70 font-medium">Type to add to catalog.</p>}
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-2 relative z-30">
                                 <label className="text-sm font-bold text-foreground">Category *</label>
-                                <select
-                                    required
+                                <FilterDropdown
                                     value={formData.category}
-                                    onChange={e => setFormData({ ...formData, category: e.target.value })}
-                                    className="w-full px-4 py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 appearance-none cursor-pointer font-medium shadow-sm"
-                                    style={{
-                                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                        backgroundPosition: `right 1rem center`,
-                                        backgroundRepeat: `no-repeat`,
-                                        backgroundSize: `1.5em 1.5em`
-                                    }}
-                                >
-                                    {CATEGORY_OPTIONS.map(cat => (
-                                        <option key={cat} value={cat} className="bg-card text-foreground">{cat}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setFormData({ ...formData, category: val })}
+                                    options={CATEGORY_OPTIONS.map(cat => ({ value: cat, label: cat }))}
+                                    className="w-full bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl flex items-center justify-between px-4 py-2.5 sm:py-3 shadow-sm transition-all duration-200 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary text-sm"
+                                />
                             </div>
                         </div>
 
                         {/* Smart Expansion UI */}
                         {isNewMedicine && formData.medicine_name.trim().length > 2 && (
-                            <div className={`mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 p-5 border rounded-xl animate-in slide-in-from-top-2 duration-300 shadow-sm ${isMedsFull ? 'bg-destructive/5 border-destructive/30' : 'bg-primary/5 border-primary/20'}`}>
-                                <div className="md:col-span-2 flex items-center justify-between">
-                                    <p className={`text-sm font-bold flex items-center gap-2 ${isMedsFull ? 'text-destructive' : 'text-primary'}`}>
-                                        <span className={`w-2 h-2 rounded-full animate-pulse ${isMedsFull ? 'bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'bg-primary shadow-[0_0_8px_rgba(5,150,105,0.6)]'}`}></span>
+                            <div className={`mt-4 sm:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 p-4 sm:p-5 border rounded-xl animate-in slide-in-from-top-2 duration-300 shadow-sm ${isMedsFull ? 'bg-destructive/5 border-destructive/30' : 'bg-primary/5 border-primary/20'}`}>
+                                <div className="md:col-span-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                    <p className={`text-xs sm:text-sm font-bold flex items-center gap-2 ${isMedsFull ? 'text-destructive' : 'text-primary'}`}>
+                                        <span className={`w-2 h-2 rounded-full animate-pulse shrink-0 ${isMedsFull ? 'bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'bg-primary shadow-[0_0_8px_rgba(5,150,105,0.6)]'}`}></span>
                                         {isMedsFull ? `Cannot Add New SKU: ${shopPlan} Plan Limit Reached` : "New Medicine Detected. Add catalog details (Optional)"}
                                     </p>
                                     {isMedsFull && (
-                                        <button type="button" onClick={() => router.push('/dashboard/settings')} className="text-xs bg-destructive text-destructive-foreground px-3 py-1 rounded font-bold hover:bg-destructive/90 transition-colors">
+                                        <button type="button" onClick={() => router.push('/dashboard/settings')} className="text-xs w-full sm:w-auto text-center bg-destructive text-destructive-foreground px-3 py-2 sm:py-1 rounded font-bold hover:bg-destructive/90 transition-colors">
                                             Upgrade Plan
                                         </button>
                                     )}
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-bold text-muted-foreground">Generic Name</label>
-                                    <input type="text" disabled={isMedsFull} value={formData.generic_name} onChange={e => setFormData({ ...formData, generic_name: e.target.value })} className="w-full px-4 py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 disabled:opacity-50 placeholder:text-muted-foreground/40 font-medium shadow-sm" placeholder="e.g. Amoxicillin Potassium Clavulanate" />
+                                    <label className="text-xs sm:text-sm font-bold text-muted-foreground">Generic Name</label>
+                                    <input type="text" disabled={isMedsFull} value={formData.generic_name} onChange={e => setFormData({ ...formData, generic_name: e.target.value })} className="w-full px-4 py-2.5 sm:py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 disabled:opacity-50 placeholder:text-muted-foreground/40 font-medium shadow-sm" placeholder="e.g. Amoxicillin Potassium Clavulanate" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-bold text-muted-foreground">Manufacturer</label>
-                                    <input type="text" disabled={isMedsFull} value={formData.manufacturer} onChange={e => setFormData({ ...formData, manufacturer: e.target.value })} className="w-full px-4 py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 disabled:opacity-50 placeholder:text-muted-foreground/40 font-medium shadow-sm" placeholder="e.g. GlaxoSmithKline" />
+                                    <label className="text-xs sm:text-sm font-bold text-muted-foreground">Manufacturer</label>
+                                    <input type="text" disabled={isMedsFull} value={formData.manufacturer} onChange={e => setFormData({ ...formData, manufacturer: e.target.value })} className="w-full px-4 py-2.5 sm:py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 disabled:opacity-50 placeholder:text-muted-foreground/40 font-medium shadow-sm" placeholder="e.g. GlaxoSmithKline" />
                                 </div>
                             </div>
                         )}
                     </div>
 
                     {/* SECTION 2: Batch Details */}
-                    <div>
-                        <h2 className="text-xs font-mono text-muted-foreground font-bold uppercase tracking-wider mb-5 flex items-center gap-2 pb-2 border-b border-border">
+                    <div className="relative z-10">
+                        <h2 className="text-[11px] sm:text-xs font-mono text-muted-foreground font-bold uppercase tracking-wider mb-4 sm:mb-5 flex items-center gap-2 pb-2 border-b border-border">
                             <Hash className="w-4 h-4" /> 2. Batch & Supply Info
                         </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-foreground">Batch Number *</label>
-                                <input type="text" required value={formData.batch_number} onChange={e => setFormData({ ...formData, batch_number: e.target.value })} className="w-full px-4 py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 uppercase placeholder:text-muted-foreground/40 font-medium shadow-sm" placeholder="e.g. BATCH-A12" />
+                                <input type="text" required value={formData.batch_number} onChange={e => setFormData({ ...formData, batch_number: e.target.value })} className="w-full px-4 py-2.5 sm:py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 uppercase placeholder:text-muted-foreground/40 font-medium shadow-sm" placeholder="e.g. BATCH-A12" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-foreground">Expiry Date *</label>
-                                <input type="month" required value={formData.expiry_date} onChange={e => setFormData({ ...formData, expiry_date: e.target.value })} className="w-full px-4 py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 font-medium shadow-sm" />
+                                <input type="month" required value={formData.expiry_date} onChange={e => setFormData({ ...formData, expiry_date: e.target.value })} className="w-full px-4 py-2.5 sm:py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 font-medium shadow-sm" />
                             </div>
 
                             {/* Dealer Dropdown */}
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                    <label className="text-sm font-bold text-foreground flex items-center gap-2">Dealer / Supplier</label>
-                                </div>
-                                <select
+                            <div className="space-y-2 sm:col-span-2 md:col-span-1 relative z-20">
+                                <label className="text-sm font-bold text-foreground flex items-center gap-2">Dealer / Supplier</label>
+                                <FilterDropdown
                                     value={formData.dealer_name}
-                                    onChange={e => setFormData({ ...formData, dealer_name: e.target.value })}
-                                    className="w-full px-4 py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 appearance-none cursor-pointer font-medium shadow-sm"
-                                    style={{
-                                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                        backgroundPosition: `right 1rem center`,
-                                        backgroundRepeat: `no-repeat`,
-                                        backgroundSize: `1.5em 1.5em`
-                                    }}
-                                >
-                                    <option value="" className="text-muted-foreground">Select a Dealer</option>
-                                    {dealers.map(dealer => (
-                                        <option key={dealer.id} value={dealer.name} className="bg-card text-foreground">
-                                            {dealer.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {dealers.length === 0 && <p className="text-[10px] font-semibold text-muted-foreground">No dealers found. Add them in settings.</p>}
+                                    onChange={(val) => setFormData({ ...formData, dealer_name: val })}
+                                    options={[
+                                        { value: "", label: "Select a Dealer" },
+                                        ...dealers.map(dealer => ({ value: dealer.name, label: dealer.name }))
+                                    ]}
+                                    className="w-full bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl flex items-center justify-between px-4 py-2.5 sm:py-3 shadow-sm transition-all duration-200 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary text-sm"
+                                />
+                                {dealers.length === 0 && <p className="text-[10px] font-semibold text-muted-foreground mt-1">No dealers found. Add them in settings.</p>}
                             </div>
                         </div>
                     </div>
 
                     {/* SECTION 3: Commercials */}
-                    <div>
-                        <h2 className="text-xs font-mono text-muted-foreground font-bold uppercase tracking-wider mb-5 flex items-center gap-2 pb-2 border-b border-border">
+                    <div className="relative z-0">
+                        <h2 className="text-[11px] sm:text-xs font-mono text-muted-foreground font-bold uppercase tracking-wider mb-4 sm:mb-5 flex items-center gap-2 pb-2 border-b border-border">
                             <IndianRupee className="w-4 h-4" /> 3. Commercials
                         </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 items-start">
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-foreground">Quantity Received *</label>
-                                <input type="number" min="1" required value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} className="w-full px-4 py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 font-mono placeholder:text-muted-foreground/40 shadow-sm" placeholder="Units" />
+                                <label className="text-xs sm:text-sm font-bold text-foreground">Qty Received *</label>
+                                <input type="number" min="1" required value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 font-mono placeholder:text-muted-foreground/40 shadow-sm" placeholder="Units" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-foreground">Purchase Price (₹) *</label>
-                                <input type="number" step="0.01" min="0" required value={formData.purchase_price} onChange={e => setFormData({ ...formData, purchase_price: e.target.value })} className="w-full px-4 py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 font-mono placeholder:text-muted-foreground/40 shadow-sm" placeholder="Cost per unit" />
+                                <label className="text-xs sm:text-sm font-bold text-foreground">Pur. Price (₹) *</label>
+                                <input type="number" step="0.01" min="0" required value={formData.purchase_price} onChange={e => setFormData({ ...formData, purchase_price: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 font-mono placeholder:text-muted-foreground/40 shadow-sm" placeholder="Cost" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-foreground">M.R.P (₹) *</label>
-                                <input type="number" step="0.01" min="0" required value={formData.mrp} onChange={e => setFormData({ ...formData, mrp: e.target.value })} className="w-full px-4 py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 font-mono placeholder:text-muted-foreground/40 shadow-sm" placeholder="Retail price" />
+                                <label className="text-xs sm:text-sm font-bold text-foreground">M.R.P (₹) *</label>
+                                <input type="number" step="0.01" min="0" required value={formData.mrp} onChange={e => setFormData({ ...formData, mrp: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 font-mono placeholder:text-muted-foreground/40 shadow-sm" placeholder="Retail" />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-muted-foreground">Est. Margin</label>
-                                <div className={`w-full px-4 py-3 bg-background border ${isLoss ? 'border-destructive/50' : 'border-border'} rounded-xl text-lg font-bold ${isLoss ? 'text-destructive' : 'text-primary'} transition-colors font-mono flex items-center justify-between shadow-sm`}>
+                                <label className="text-xs sm:text-sm font-bold text-muted-foreground">Est. Margin</label>
+                                <div className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-background border ${isLoss ? 'border-destructive/50' : 'border-border'} rounded-xl text-base sm:text-lg font-bold ${isLoss ? 'text-destructive' : 'text-primary'} transition-colors font-mono flex items-center justify-between shadow-sm`}>
                                     <span>{marginValue}%</span>
-                                    {isLoss ? <TriangleAlert className="w-5 h-5 text-destructive" /> : <Percent className="w-4 h-4 opacity-50" />}
+                                    {isLoss ? <TriangleAlert className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" /> : <Percent className="w-3 h-3 sm:w-4 sm:h-4 opacity-50" />}
                                 </div>
                             </div>
                         </div>
@@ -413,11 +462,11 @@ export default function StockEntryPage() {
 
                 </div>
 
-                <div className="p-6 border-t border-border bg-muted/30 flex justify-end">
+                <div className="p-4 sm:p-6 border-t border-border bg-muted/30 flex justify-end rounded-b-2xl">
                     <button
                         type="submit"
                         disabled={isSaving || (isMedsFull && isNewMedicine)}
-                        className="px-8 py-3.5 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:-translate-y-0.5"
+                        className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:-translate-y-0.5"
                     >
                         {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />} Commit to Ledger
                     </button>

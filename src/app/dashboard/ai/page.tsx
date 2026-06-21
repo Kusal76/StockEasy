@@ -46,11 +46,9 @@ export default function AIAssistantPage() {
         checkAuthAndLoad();
     }, []);
 
-    // 1. ADD THESE STATES AT THE TOP OF AIAssistantPage
     const [isStaff, setIsStaff] = useState(false);
     const [userEmail, setUserEmail] = useState("");
 
-    // 2. REPLACE checkAuthAndLoad WITH THIS
     const checkAuthAndLoad = async () => {
         setIsAuthorizing(true);
 
@@ -92,21 +90,20 @@ export default function AIAssistantPage() {
         }
     };
 
-    // 3. ADD THIS RENDER BLOCK RIGHT AFTER `if (isAuthorizing) { return (...) }`
     // --- RESTRICTED ACCESS SCREEN FOR STAFF ---
     if (isStaff) {
         return (
-            <div className="max-w-2xl mx-auto mt-20 animate-in fade-in duration-500 transition-colors duration-300">
-                <div className="bg-card border border-destructive/30 rounded-2xl shadow-xl p-10 flex flex-col items-center text-center relative overflow-hidden">
+            <div className="max-w-2xl mx-auto mt-10 md:mt-20 animate-in fade-in duration-500 transition-colors duration-300 p-4">
+                <div className="bg-card border border-destructive/30 rounded-2xl shadow-xl p-6 sm:p-10 flex flex-col items-center text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-destructive to-transparent opacity-50"></div>
-                    <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mb-6 border border-destructive/20 shadow-sm">
-                        <Ban className="w-10 h-10 text-destructive" />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-destructive/10 rounded-full flex items-center justify-center mb-6 border border-destructive/20 shadow-sm">
+                        <Ban className="w-8 h-8 sm:w-10 sm:h-10 text-destructive" />
                     </div>
-                    <h1 className="text-3xl font-bold text-foreground mb-3">Access Restricted</h1>
-                    <p className="text-muted-foreground mb-6 max-w-md leading-relaxed font-medium">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">Access Restricted</h1>
+                    <p className="text-muted-foreground mb-6 max-w-md leading-relaxed font-medium text-sm sm:text-base">
                         Your account is provisioned with <strong>Staff</strong> privileges. The StockEasy AI Assistant and live predictive insights are strictly restricted to the Shop Owner.
                     </p>
-                    <div className="px-6 py-3 bg-secondary border border-border rounded-xl text-sm font-mono text-muted-foreground shadow-sm">
+                    <div className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-secondary border border-border rounded-xl text-xs sm:text-sm font-mono text-muted-foreground shadow-sm truncate">
                         Logged in as: <span className="text-foreground font-bold">{userEmail}</span>
                     </div>
                 </div>
@@ -114,13 +111,12 @@ export default function AIAssistantPage() {
         );
     }
 
-    // --- UPGRADED: COMPREHENSIVE DATA CONTEXT BUILDER ---
+    // --- COMPREHENSIVE DATA CONTEXT BUILDER ---
     const buildShopContext = async (providedShopId?: string) => {
         setIsRefreshingContext(true);
         try {
             let activeShopId = providedShopId;
 
-            // If called from the Refresh button, we need to fetch the ID again
             if (!activeShopId) {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) return;
@@ -130,29 +126,22 @@ export default function AIAssistantPage() {
 
             if (!activeShopId) return;
 
-            // Run multiple queries in parallel for speed
             const [
                 { data: inventory },
                 { data: bills },
                 { data: dealers },
                 { data: shopSettings }
             ] = await Promise.all([
-                // 1. Fetch entire inventory (ordered by expiry for FEFO analysis)
                 supabase.from('inventory').select('*').eq('shop_id', activeShopId).order('expiry_date', { ascending: true }),
-                // 2. Fetch recent bills & items
                 supabase.from('bills').select('*, bill_items(*)').eq('shop_id', activeShopId).order('created_at', { ascending: false }).limit(30),
-                // 3. Fetch dealers
                 supabase.from('dealers').select('*').eq('shop_id', activeShopId),
-                // 4. Fetch shop settings/profile
                 supabase.from('shops').select('name, business_type, plan, status').eq('id', activeShopId).single()
             ]);
 
-            // Calculate quick analytics for the AI
             const totalRevenue = (bills || []).reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0);
             const totalInventoryItems = (inventory || []).length;
             const lowStockItems = (inventory || []).filter(i => Number(i.quantity) < 10).length;
 
-            // Compile massive context string
             let contextStr = `
                 PHARMACY DATA SNAPSHOT (Generated: ${new Date().toLocaleString()}):
                 
@@ -198,7 +187,6 @@ export default function AIAssistantPage() {
         const userMsg = textToSend.trim();
         setInput("");
 
-        // Add user message to UI
         const newUserMsg: ChatMessage = { id: Date.now().toString(), role: "user", content: userMsg };
         setMessages(prev => [...prev, newUserMsg]);
         setIsTyping(true);
@@ -214,11 +202,9 @@ export default function AIAssistantPage() {
 
             if (!response.ok) throw new Error(data.error || "Failed to fetch response.");
 
-            // Add AI response to UI
             setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: "ai", content: data.text }]);
         } catch (error: any) {
             console.error("Chat Error:", error);
-            // Show the professional error message returned by our backend
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: "ai",
@@ -242,19 +228,19 @@ export default function AIAssistantPage() {
     // --- GATED ACCESS SCREEN ---
     if (shopPlan !== "PRO") {
         return (
-            <div className="max-w-2xl mx-auto mt-20 animate-in fade-in duration-500 transition-colors duration-300">
-                <div className="bg-card border border-primary/30 rounded-2xl shadow-xl p-10 flex flex-col items-center text-center relative overflow-hidden">
+            <div className="max-w-2xl mx-auto mt-10 md:mt-20 animate-in fade-in duration-500 transition-colors duration-300 p-4">
+                <div className="bg-card border border-primary/30 rounded-2xl shadow-xl p-6 sm:p-10 flex flex-col items-center text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50"></div>
-                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 border border-primary/20 shadow-sm">
-                        <Lock className="w-10 h-10 text-primary" />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 border border-primary/20 shadow-sm">
+                        <Lock className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
                     </div>
-                    <h1 className="text-3xl font-bold text-foreground mb-3">Pro Feature Locked</h1>
-                    <p className="text-muted-foreground mb-8 leading-relaxed max-w-md font-medium">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">Pro Feature Locked</h1>
+                    <p className="text-muted-foreground mb-8 leading-relaxed max-w-md font-medium text-sm sm:text-base">
                         The StockEasy AI Assistant and Predictive Demand Engine require significant computing power. Please upgrade to the <strong>Pro Plan</strong> to unlock this enterprise feature.
                     </p>
                     <button
                         onClick={() => router.push('/dashboard/settings')}
-                        className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-bold shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
+                        className="w-full sm:w-auto bg-primary text-primary-foreground px-8 py-3 rounded-xl font-bold shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
                     >
                         Upgrade to Pro
                     </button>
@@ -265,13 +251,13 @@ export default function AIAssistantPage() {
 
     // --- FULL AI ASSISTANT (PRO ONLY) ---
     return (
-        <div className="max-w-5xl mx-auto animate-in fade-in duration-500 h-[calc(100vh-120px)] flex flex-col relative pb-8 transition-colors duration-300">
+        <div className="max-w-5xl mx-auto animate-in fade-in duration-500 h-[calc(100vh-120px)] flex flex-col relative pb-4 sm:pb-8 transition-colors duration-300">
 
-            {/* Header */}
-            <div className="flex items-center justify-between gap-3 mb-6 shrink-0">
+            {/* Header - FIX: Stack on mobile */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6 shrink-0">
                 <div className="flex items-center gap-3">
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground tracking-tight">StockEasy AI Assistant</h1>
+                        <h1 className="text-3xl font-bold text-foreground tracking-tight">StockEasy AI Assistant</h1>
                         <p className="text-muted-foreground text-sm font-medium">Powered by Google Gemini Enterprise</p>
                     </div>
                 </div>
@@ -279,7 +265,7 @@ export default function AIAssistantPage() {
                 <button
                     onClick={() => buildShopContext()}
                     disabled={isRefreshingContext}
-                    className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 bg-card border border-border rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
                     title="Pull latest live data from database"
                 >
                     <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingContext ? 'animate-spin text-primary' : ''}`} />
@@ -291,30 +277,30 @@ export default function AIAssistantPage() {
             <div className="flex-1 bg-card border border-border rounded-2xl shadow-sm flex flex-col overflow-hidden relative transition-colors duration-300">
 
                 {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 custom-scrollbar">
                     {messages.map((msg) => (
-                        <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <div key={msg.id} className={`flex gap-3 sm:gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
 
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 shadow-sm ${msg.role === 'user' ? 'bg-muted text-foreground border border-border' : 'bg-primary/10 border border-primary/20 text-primary'}`}>
                                 {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                             </div>
 
-                            <div className={`max-w-[80%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed ${msg.role === 'user'
+                            {/* FIX: Wider max-w on mobile so columns aren't super thin */}
+                            <div className={`max-w-[90%] md:max-w-[80%] rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5 text-sm leading-relaxed ${msg.role === 'user'
                                 ? 'bg-primary text-primary-foreground font-bold rounded-tr-sm shadow-sm'
                                 : 'bg-background border border-border text-foreground font-medium rounded-tl-sm whitespace-pre-wrap shadow-sm'
                                 }`}>
-                                {/* Frontend markdown stripper to guarantee clean SaaS text output */}
                                 {msg.content.replace(/\*\*/g, '')}
                             </div>
                         </div>
                     ))}
 
                     {isTyping && (
-                        <div className="flex gap-4">
+                        <div className="flex gap-3 sm:gap-4">
                             <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 mt-1 shadow-sm">
                                 <Bot className="w-4 h-4" />
                             </div>
-                            <div className="bg-background border border-border rounded-2xl rounded-tl-sm px-5 py-4 flex items-center gap-2 shadow-sm">
+                            <div className="bg-background border border-border rounded-2xl rounded-tl-sm px-4 sm:px-5 py-3.5 sm:py-4 flex items-center gap-2 shadow-sm">
                                 <span className="w-2 h-2 bg-primary rounded-full animate-bounce"></span>
                                 <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
                                 <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
@@ -325,26 +311,26 @@ export default function AIAssistantPage() {
                 </div>
 
                 {/* Input Area */}
-                <div className="p-4 bg-muted/20 border-t border-border">
+                <div className="p-3 sm:p-4 bg-muted/20 border-t border-border">
 
                     {messages.length < 3 && (
-                        <div className="flex flex-wrap gap-2 mb-4">
+                        <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
                             {QUICK_PROMPTS.map((prompt, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => handleSendMessage(undefined, prompt)}
                                     disabled={isTyping || isRefreshingContext}
-                                    className="flex items-center gap-1.5 text-[11px] font-bold bg-background border border-primary/30 text-primary px-3 py-1.5 rounded-full hover:bg-primary/10 hover:border-primary/50 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                                    className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold bg-background border border-primary/30 text-primary px-3 py-2 sm:py-1.5 rounded-full hover:bg-primary/10 hover:border-primary/50 transition-colors disabled:opacity-50 cursor-pointer shadow-sm text-left"
                                 >
-                                    <Zap className="w-3 h-3" /> {prompt}
+                                    <Zap className="w-3 h-3 shrink-0" /> {prompt}
                                 </button>
                             ))}
                         </div>
                     )}
 
-                    <div className="bg-background border border-border rounded-lg p-3 mb-4 flex items-start gap-3 shadow-sm">
+                    <div className="bg-background border border-border rounded-lg p-2.5 sm:p-3 mb-3 sm:mb-4 flex items-start gap-2 sm:gap-3 shadow-sm">
                         <ShieldAlert className="w-4 h-4 text-info mt-0.5 shrink-0" />
-                        <p className="text-xs text-muted-foreground font-medium">AI responses are generated based on your current live database context. Verify important clinical data manually.</p>
+                        <p className="text-[11px] sm:text-xs text-muted-foreground font-medium">AI responses are generated based on your current live database context. Verify important clinical data manually.</p>
                     </div>
 
                     <form onSubmit={handleSendMessage} className="relative flex items-center">
@@ -352,14 +338,14 @@ export default function AIAssistantPage() {
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder={isRefreshingContext ? "Syncing database..." : "Ask about inventory, sales, or expiring items..."}
-                            className="w-full bg-background border border-border rounded-xl pl-4 pr-14 py-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm font-medium disabled:opacity-50"
+                            placeholder={isRefreshingContext ? "Syncing database..." : "Ask about inventory, sales..."}
+                            className="w-full bg-background border border-border rounded-xl pl-4 pr-12 sm:pr-14 py-3.5 sm:py-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm font-medium disabled:opacity-50"
                             disabled={isTyping || isRefreshingContext}
                         />
                         <button
                             type="submit"
                             disabled={!input.trim() || isTyping || isRefreshingContext}
-                            className="absolute right-2 p-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                            className="absolute right-1.5 sm:right-2 p-2 sm:p-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
                         >
                             {isTyping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                         </button>

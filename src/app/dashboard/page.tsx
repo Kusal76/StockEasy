@@ -261,12 +261,12 @@ export default function DashboardHome() {
     const midSales = maxSales / 2;
 
     return (
-        <div className="max-w-7xl mx-auto animate-in fade-in duration-500 space-y-8 pb-10">
+        <div className="max-w-7xl mx-auto animate-in fade-in duration-500 space-y-6 sm:space-y-8 pb-10">
 
-            {/* Header */}
-            <div className="flex justify-between items-end">
+            {/* Header - FIX: Flex-col on mobile so buttons don't squash */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-1 flex items-center gap-3">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mb-1 flex flex-wrap items-center gap-2 sm:gap-3">
                         Dashboard
                         {isSyncing && (
                             <span className="flex items-center gap-1.5 text-[10px] text-primary font-mono uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
@@ -277,15 +277,16 @@ export default function DashboardHome() {
                     <p className="text-muted-foreground text-sm">Overview of your clinical inventory</p>
                 </div>
 
-                <button onClick={handleExportCSV} className="hidden sm:flex items-center gap-2 bg-primary/10 border border-primary/30 hover:bg-primary hover:text-primary-foreground text-primary px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5">
+                {/* FIX: Removed 'hidden sm:flex' and added 'w-full sm:w-auto justify-center' */}
+                <button onClick={handleExportCSV} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary/10 border border-primary/30 hover:bg-primary hover:text-primary-foreground text-primary px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5">
                     <Download className="w-4 h-4" /> Export Report
                 </button>
             </div>
 
-            {/* Top Metrics Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Top Metrics Grid - FIX: 1 col mobile, 2 col tablet, 5 col desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
-                <div className="bg-card border border-border rounded-2xl p-5 relative overflow-hidden group col-span-2 lg:col-span-1 shadow-sm transition-colors">
+                <div className="bg-card border border-border rounded-2xl p-5 relative overflow-hidden group col-span-1 sm:col-span-2 lg:col-span-1 shadow-sm transition-colors">
                     <div className="flex justify-between items-start mb-2">
                         <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Today's Sales</h3>
                         <TrendingUp className="w-4 h-4 text-primary opacity-70" />
@@ -302,7 +303,6 @@ export default function DashboardHome() {
                     <div className="text-2xl font-bold text-foreground tracking-tight">{formatCurrency(metrics.stockValue)}</div>
                 </div>
 
-                {/* --- AMBER: Near Expiry --- */}
                 <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 relative overflow-hidden group shadow-sm transition-colors">
                     <div className="flex justify-between items-start mb-2">
                         <h3 className="text-xs font-mono text-amber-500 uppercase tracking-widest">Near Expiry</h3>
@@ -311,7 +311,6 @@ export default function DashboardHome() {
                     <div className="text-2xl font-bold text-amber-500 tracking-tight">{metrics.nearExpiryCount}</div>
                 </div>
 
-                {/* --- RED: Expired --- */}
                 <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-5 relative overflow-hidden group shadow-sm transition-colors">
                     <div className="flex justify-between items-start mb-2">
                         <h3 className="text-xs font-mono text-destructive uppercase tracking-widest">Expired</h3>
@@ -320,7 +319,6 @@ export default function DashboardHome() {
                     <div className="text-2xl font-bold text-destructive tracking-tight">{metrics.expiredCount}</div>
                 </div>
 
-                {/* --- ORANGE: Low Stock --- */}
                 <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-5 relative overflow-hidden group shadow-sm transition-colors">
                     <div className="flex justify-between items-start mb-2">
                         <h3 className="text-xs font-mono text-orange-500 uppercase tracking-widest">Low Stock</h3>
@@ -331,17 +329,17 @@ export default function DashboardHome() {
 
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-4">
+            {/* Quick Actions - FIX: Stack on mobile, full width buttons */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
                 <button
                     onClick={() => router.push('/dashboard/sell')}
-                    className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-sm"
+                    className="w-full sm:w-auto flex justify-center items-center gap-2 bg-primary text-primary-foreground px-6 py-3 sm:py-2.5 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-sm"
                 >
                     <Receipt className="w-4 h-4" /> New Bill
                 </button>
                 <button
                     onClick={() => router.push('/dashboard/stock-entry')}
-                    className="flex items-center gap-2 bg-transparent border border-primary text-primary px-6 py-2.5 rounded-xl font-bold hover:bg-primary/10 transition-all"
+                    className="w-full sm:w-auto flex justify-center items-center gap-2 bg-transparent border border-primary text-primary px-6 py-3 sm:py-2.5 rounded-xl font-bold hover:bg-primary/10 transition-all"
                 >
                     <Plus className="w-4 h-4" /> Add Stock
                 </button>
@@ -351,26 +349,27 @@ export default function DashboardHome() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Expiry Action Table */}
-                <div className="lg:col-span-2 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col transition-colors">
-                    <div className="p-6 flex justify-between items-center border-b border-border bg-muted/30">
-                        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <div className="lg:col-span-2 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col transition-colors w-full">
+                    <div className="p-4 sm:p-6 flex justify-between items-center border-b border-border bg-muted/30">
+                        <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
                             Critical Inventory Alerts
                         </h2>
                         <button
                             onClick={() => router.push('/dashboard/inventory?filter=expiring')}
-                            className="text-xs font-bold text-primary hover:text-foreground transition-colors uppercase tracking-wider"
+                            className="text-xs font-bold text-primary hover:text-foreground transition-colors uppercase tracking-wider shrink-0"
                         >
                             View All
                         </button>
                     </div>
-                    <div className="overflow-x-auto flex-1">
-                        <table className="w-full text-left whitespace-nowrap">
+                    {/* FIX: Ensuring horizontal scroll works flawlessly on tiny screens */}
+                    <div className="overflow-x-auto custom-scrollbar flex-1 w-full">
+                        <table className="w-full text-left whitespace-nowrap min-w-[500px]">
                             <thead>
                                 <tr className="text-[10px] tracking-wider text-muted-foreground font-mono border-b border-border uppercase">
-                                    <th className="px-6 py-4">Medicine</th>
-                                    <th className="px-6 py-4">Status / Exp Date</th>
-                                    <th className="px-6 py-4">Batch</th>
-                                    <th className="px-6 py-4 text-right">Qty</th>
+                                    <th className="px-4 sm:px-6 py-4">Medicine</th>
+                                    <th className="px-4 sm:px-6 py-4">Status / Exp Date</th>
+                                    <th className="px-4 sm:px-6 py-4">Batch</th>
+                                    <th className="px-4 sm:px-6 py-4 text-right">Qty</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
@@ -383,11 +382,11 @@ export default function DashboardHome() {
                                 ) : (
                                     expiringItems.map((item) => (
                                         <tr key={item.id} className={`transition-colors ${item.is_expired ? 'bg-destructive/5 hover:bg-destructive/10' : 'hover:bg-muted/50'}`}>
-                                            <td className="px-6 py-4 text-sm text-foreground font-medium flex items-center gap-2">
+                                            <td className="px-4 sm:px-6 py-4 text-sm text-foreground font-medium flex items-center gap-2">
                                                 {item.is_expired && <Skull className="w-4 h-4 text-destructive shrink-0" />}
                                                 {item.medicine_name}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-4 sm:px-6 py-4">
                                                 {item.is_expired ? (
                                                     <span className="bg-destructive/20 text-destructive border border-destructive/30 px-2 py-0.5 rounded text-xs font-bold">
                                                         EXPIRED
@@ -398,12 +397,12 @@ export default function DashboardHome() {
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-4 sm:px-6 py-4">
                                                 <span className="bg-background border border-border px-2.5 py-1 rounded text-[11px] font-mono text-muted-foreground">
                                                     {item.batch_number}
                                                 </span>
                                             </td>
-                                            <td className={`px-6 py-4 text-sm font-bold text-right ${item.is_expired ? 'text-destructive' : 'text-foreground'}`}>
+                                            <td className={`px-4 sm:px-6 py-4 text-sm font-bold text-right ${item.is_expired ? 'text-destructive' : 'text-foreground'}`}>
                                                 {item.quantity}
                                             </td>
                                         </tr>
@@ -415,15 +414,14 @@ export default function DashboardHome() {
                 </div>
 
                 {/* VISUAL SALES CHART */}
-                <div className="bg-card border border-border rounded-2xl shadow-sm p-6 flex flex-col relative overflow-hidden transition-colors">
+                <div className="bg-card border border-border rounded-2xl shadow-sm p-4 sm:p-6 flex flex-col relative overflow-hidden transition-colors w-full">
 
-                    {/* FEATURE GATE: Analytics Blur for Starter Plan */}
                     {shopPlan === "STARTER" && (
                         <div className="absolute inset-0 z-20 backdrop-blur-md bg-background/80 flex flex-col items-center justify-center border border-primary/20 p-6 text-center animate-in fade-in">
-                            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4 border border-primary/30">
-                                <Lock className="w-6 h-6 text-primary" />
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4 border border-primary/30">
+                                <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                             </div>
-                            <h3 className="text-foreground font-bold text-lg mb-2">Analytics Locked</h3>
+                            <h3 className="text-foreground font-bold text-base sm:text-lg mb-2">Analytics Locked</h3>
                             <p className="text-muted-foreground text-xs mb-5 max-w-[200px] leading-relaxed">
                                 Upgrade to the Growth plan to unlock 7-day visual sales trends and predictive insights.
                             </p>
@@ -437,11 +435,10 @@ export default function DashboardHome() {
                     )}
 
                     <div className="flex justify-between items-center mb-8 relative z-10">
-                        <h2 className="text-lg font-bold text-foreground">Sales (7 days)</h2>
+                        <h2 className="text-base sm:text-lg font-bold text-foreground">Sales (7 days)</h2>
                     </div>
 
                     <div className="flex-1 relative mt-auto pb-6 z-10">
-                        {/* Graph Background Grid & Y-Axis Labels */}
                         <div className="absolute inset-0 flex flex-col justify-between pb-6 pointer-events-none">
                             <div className="border-b border-border w-full h-0 flex items-center">
                                 <span className="absolute -left-1 text-[10px] font-mono text-muted-foreground -translate-y-full pb-1">₹{(maxSales >= 1000 ? (maxSales / 1000).toFixed(1) + 'k' : maxSales)}</span>
@@ -452,27 +449,27 @@ export default function DashboardHome() {
                             <div className="border-b border-border w-full h-0"></div>
                         </div>
 
-                        {/* Chart Bars */}
-                        <div className="flex items-end justify-between gap-3 h-48 relative">
+                        {/* Chart Bars - FIX: Added active and focus states for touch screens */}
+                        <div className="flex items-end justify-between gap-2 sm:gap-3 h-48 relative">
                             {weeklySales.map((data, index) => {
                                 const heightPct = data.amount > 0 ? Math.max((data.amount / maxSales) * 100, 5) : 2;
 
                                 return (
-                                    <div key={index} className="flex flex-col items-center justify-end h-full w-full group relative">
-                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-2 bg-popover border border-border text-popover-foreground text-[11px] font-bold px-2.5 py-1.5 rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-20 flex flex-col items-center">
+                                    <div key={index} tabIndex={0} className="flex flex-col items-center justify-end h-full w-full group relative focus:outline-none cursor-pointer sm:cursor-default">
+                                        <div className="opacity-0 group-hover:opacity-100 group-focus:opacity-100 group-active:opacity-100 transition-opacity absolute bottom-full mb-2 bg-popover border border-border text-popover-foreground text-[10px] sm:text-[11px] font-bold px-2 py-1.5 rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-20 flex flex-col items-center">
                                             ₹{data.amount.toLocaleString('en-IN')}
                                             <div className="absolute top-full w-2 h-2 bg-popover border-b border-r border-border rotate-45 -translate-y-1.5"></div>
                                         </div>
                                         <div
-                                            className={`w-full max-w-[28px] rounded-t-sm transition-all duration-700 ease-out ${data.isToday && data.amount > 0
+                                            className={`w-full max-w-[20px] sm:max-w-[28px] rounded-t-sm transition-all duration-700 ease-out ${data.isToday && data.amount > 0
                                                 ? 'bg-primary shadow-sm'
                                                 : data.amount > 0
-                                                    ? 'bg-primary/40 hover:bg-primary/70'
+                                                    ? 'bg-primary/40 hover:bg-primary/70 focus:bg-primary/70 active:bg-primary/70'
                                                     : 'bg-muted'
                                                 }`}
                                             style={{ height: `${heightPct}%` }}
                                         ></div>
-                                        <span className={`absolute -bottom-6 text-[10px] font-mono ${data.isToday ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+                                        <span className={`absolute -bottom-6 text-[9px] sm:text-[10px] font-mono ${data.isToday ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
                                             {data.day}
                                         </span>
                                     </div>

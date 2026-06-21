@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabase";
-import { Search, ShoppingCart, Plus, Minus, Trash2, Receipt, CheckCircle2, AlertCircle, Loader2, Printer, UserCircle, AlertTriangle, Percent } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Trash2, Receipt, CheckCircle2, AlertCircle, Loader2, Printer, UserCircle, AlertTriangle, Percent, ChevronDown } from "lucide-react";
 
 interface InventoryItem {
     id: string;
@@ -17,6 +17,75 @@ interface InventoryItem {
 interface CartItem extends InventoryItem {
     cartQuantity: number;
 }
+
+// Custom UI Component for the Filter Dropdown
+const FilterDropdown = ({
+    value,
+    options,
+    onChange,
+    icon: Icon,
+    className,
+    placement = "bottom"
+}: {
+    value: string,
+    options: { value: string, label: string }[],
+    onChange: (val: string) => void,
+    icon?: any,
+    className?: string,
+    placement?: "top" | "bottom"
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedLabel = options.find((o) => o.value === value)?.label || value;
+
+    return (
+        <div className="relative shrink-0" ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className={className || "w-full bg-card border border-border rounded-xl flex items-center justify-between px-4 py-2.5 shadow-sm transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20"}
+            >
+                <div className="flex items-center gap-2 pr-2">
+                    {Icon && <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
+                    <span className="text-foreground text-sm font-bold truncate">{selectedLabel}</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ${isOpen && placement === 'bottom' ? 'rotate-180' : isOpen && placement === 'top' ? 'rotate-0' : placement === 'top' ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className={`absolute ${placement === 'top' ? 'bottom-full mb-1.5 slide-in-from-bottom-2' : 'top-full mt-1.5 slide-in-from-top-2'} right-0 min-w-[140px] bg-card border border-border rounded-xl shadow-lg z-[100] overflow-hidden animate-in fade-in duration-200`}>
+                    <div className="py-1 max-h-[200px] overflow-y-auto custom-scrollbar">
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-muted ${value === opt.value ? 'bg-primary/10 text-primary font-bold' : 'text-foreground font-medium'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function SellPage() {
     const [shopId, setShopId] = useState<string | null>(null);
@@ -197,7 +266,6 @@ export default function SellPage() {
 
     // Round to the nearest whole number (e.g. 43.20 -> 43.00)
     const cartGrandTotal = Math.round(rawTotal);
-    // Calculate the difference for accounting purposes (e.g. 43.00 - 43.20 = -0.20)
     const roundOffAmount = cartGrandTotal - rawTotal;
 
     const generatePrintableInvoice = (billId: string, subTotal: number, discountPct: number, discountAmt: number, roundOff: number, grandTotal: number, items: CartItem[]) => {
@@ -371,7 +439,7 @@ export default function SellPage() {
                     customer_phone: customerPhone,
                     subtotal: cartSubTotal,
                     discount_percentage: discountVal,
-                    total_amount: cartGrandTotal, // DB natively receives the rounded exact value!
+                    total_amount: cartGrandTotal,
                     payment_method: paymentMethod
                 })
                 .select('id')
@@ -416,11 +484,11 @@ export default function SellPage() {
     };
 
     return (
-        <div className="h-full flex gap-6 animate-in fade-in duration-500 relative">
+        <div className="h-full flex flex-col lg:flex-row gap-6 animate-in fade-in duration-500 relative">
 
             <div className="flex-1 flex flex-col gap-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground tracking-tight">Point of Sale</h1>
+                    <h1 className="text-3xl font-bold text-foreground tracking-tight">Point of Sale</h1>
                     <p className="text-muted-foreground text-sm font-medium mt-1">Search inventory and create new bills.</p>
                 </div>
 
@@ -431,19 +499,19 @@ export default function SellPage() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search medicines by brand or composition..."
-                        className="w-full bg-secondary hover:bg-muted border border-transparent hover:border-border text-foreground text-lg rounded-2xl pl-12 pr-4 py-4 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 placeholder:text-muted-foreground shadow-sm"
+                        className="w-full bg-secondary hover:bg-muted border border-transparent hover:border-border text-foreground text-base md:text-lg rounded-2xl pl-12 pr-4 py-4 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 placeholder:text-muted-foreground shadow-sm"
                     />
                     {isSearching && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />}
                 </div>
 
-                <div className="flex-1 bg-card border border-border rounded-2xl p-4 overflow-y-auto custom-scrollbar shadow-sm">
+                <div className="flex-1 min-h-[300px] lg:min-h-0 bg-card border border-border rounded-2xl p-4 overflow-y-auto custom-scrollbar shadow-sm">
                     {searchQuery.length < 2 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-60">
+                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-60 py-10">
                             <Search className="w-12 h-12 mb-4" />
-                            <p className="font-medium">Type at least 2 characters to search inventory</p>
+                            <p className="font-medium text-center">Type at least 2 characters to search inventory</p>
                         </div>
                     ) : inventory.length === 0 && !isSearching ? (
-                        <div className="h-full flex flex-col items-center justify-center text-warning opacity-80">
+                        <div className="h-full flex flex-col items-center justify-center text-warning opacity-80 py-10">
                             <AlertCircle className="w-12 h-12 mb-4" />
                             <p className="font-medium">No medicines found in stock.</p>
                         </div>
@@ -455,11 +523,11 @@ export default function SellPage() {
                                 return (
                                     <div
                                         key={item.id}
-                                        className={`flex items-center justify-between p-4 bg-background border ${isRecommended ? 'border-amber-500 ring-1 ring-amber-500/20 shadow-md' : 'border-border hover:border-border/80 hover:shadow-sm'} rounded-xl transition-all duration-200`}
+                                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-background border ${isRecommended ? 'border-amber-500 ring-1 ring-amber-500/20 shadow-md' : 'border-border hover:border-border/80 hover:shadow-sm'} rounded-xl transition-all duration-200`}
                                     >
                                         <div>
-                                            <div className="flex items-center gap-3">
-                                                <h3 className="font-bold text-foreground text-lg">{item.medicine_name}</h3>
+                                            <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                                                <h3 className="font-bold text-foreground text-base md:text-lg">{item.medicine_name}</h3>
                                                 {isRecommended && (
                                                     <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
                                                         <AlertTriangle className="w-3 h-3" /> Sell First
@@ -468,19 +536,19 @@ export default function SellPage() {
                                             </div>
 
                                             {item.generic_name && (
-                                                <p className="text-[11px] font-medium text-muted-foreground mt-0.5 max-w-sm truncate">
+                                                <p className="text-[11px] font-medium text-muted-foreground mt-0.5 w-full sm:max-w-sm truncate">
                                                     {item.generic_name}
                                                 </p>
                                             )}
 
-                                            <div className="flex gap-4 text-xs font-mono text-muted-foreground mt-2">
+                                            <div className="flex flex-wrap gap-3 md:gap-4 text-xs font-mono text-muted-foreground mt-2">
                                                 <span>Batch: <span className="text-foreground font-semibold">{item.batch_number}</span></span>
                                                 <span>Stock: <span className="text-foreground font-semibold">{item.quantity}</span></span>
                                                 <span>Exp: <span className={isRecommended ? "text-amber-500 font-bold" : "text-foreground font-semibold"}>{item.expiry_date}</span></span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <span className="font-bold text-primary text-xl tracking-tight">₹{item.mrp.toFixed(2)}</span>
+                                        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-border">
+                                            <span className="font-bold text-primary text-lg md:text-xl tracking-tight">₹{item.mrp.toFixed(2)}</span>
                                             <button
                                                 onClick={() => addToCart(item)}
                                                 className={`p-3 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-center ${isRecommended
@@ -500,33 +568,33 @@ export default function SellPage() {
             </div>
 
             {/* RIGHT SIDE: CART & CHECKOUT */}
-            <div className="w-[400px] flex flex-col bg-card border border-border rounded-2xl shadow-md overflow-hidden">
+            <div className="w-full lg:w-[400px] flex flex-col bg-card border border-border rounded-2xl shadow-md overflow-hidden shrink-0 mt-6 lg:mt-0">
                 <div className="p-5 border-b border-border bg-muted/30 flex items-center gap-3">
                     <ShoppingCart className="w-5 h-5 text-primary" />
                     <h2 className="font-bold text-foreground text-lg">Current Bill</h2>
                     <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">{cart.length} Items</span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-card">
+                <div className="flex-1 max-h-[40vh] lg:max-h-none overflow-y-auto p-4 space-y-3 custom-scrollbar bg-card">
                     {cart.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-60">
+                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-60 py-10">
                             {lastBillId ? (
                                 <>
                                     <CheckCircle2 className="w-12 h-12 mb-4 text-primary" />
-                                    <p className="text-primary font-bold">Transaction Successful</p>
-                                    <p className="text-xs mt-1 font-medium">Bill generated and printing.</p>
+                                    <p className="text-primary font-bold text-center">Transaction Successful</p>
+                                    <p className="text-xs mt-1 font-medium text-center">Bill generated and printing.</p>
                                 </>
                             ) : (
                                 <>
                                     <ShoppingCart className="w-12 h-12 mb-4" />
-                                    <p className="font-medium">Cart is empty</p>
+                                    <p className="font-medium text-center">Cart is empty</p>
                                 </>
                             )}
                         </div>
                     ) : (
                         cart.map(item => (
                             <div key={item.id} className="p-3.5 bg-background border border-border hover:border-border/80 hover:shadow-sm rounded-xl relative group transition-all duration-200">
-                                <h4 className="font-bold text-sm text-foreground mb-1.5 pr-6">{item.medicine_name}</h4>
+                                <h4 className="font-bold text-sm text-foreground mb-1.5 pr-6 leading-tight">{item.medicine_name}</h4>
                                 <div className="flex justify-between items-end">
                                     <span className="text-xs text-muted-foreground font-mono leading-relaxed">
                                         ₹{item.mrp} x {item.cartQuantity} <br />
@@ -549,8 +617,8 @@ export default function SellPage() {
                     )}
                 </div>
 
-                <div className="p-5 bg-background border-t border-border space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 sm:p-5 bg-background border-t border-border space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <input
                             type="text"
                             placeholder="Customer Name *"
@@ -584,14 +652,21 @@ export default function SellPage() {
 
                     <div className="flex justify-between items-center pb-3 border-b border-border">
                         <span className="text-muted-foreground text-sm font-semibold">Payment Method</span>
-                        <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-md px-2 py-1 text-foreground text-sm font-bold focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 cursor-pointer">
-                            <option value="Cash">Cash</option>
-                            <option value="Card">Card</option>
-                            <option value="UPI">UPI</option>
-                        </select>
+
+                        {/* CUSTOM FILTER DROPDOWN SET TO OPEN UPWARDS */}
+                        <FilterDropdown
+                            value={paymentMethod}
+                            onChange={setPaymentMethod}
+                            placement="bottom"
+                            options={[
+                                { value: "Cash", label: "Cash" },
+                                { value: "Card", label: "Card" },
+                                { value: "UPI", label: "UPI" },
+                            ]}
+                            className="bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-lg px-3 py-1.5 flex items-center justify-between gap-3 text-foreground text-sm font-bold focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 cursor-pointer min-w-[110px]"
+                        />
                     </div>
 
-                    {/* --- DISCOUNT INPUT --- */}
                     <div className="flex justify-between items-center py-2">
                         <span className="text-muted-foreground text-sm font-semibold flex items-center gap-1.5"><Percent className="w-4 h-4" /> Apply Discount</span>
                         <div className="relative w-20">

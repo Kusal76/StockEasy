@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
-import { Loader2, Search, ShieldAlert, Activity, Users, CreditCard, Power, PowerOff, RefreshCw, CalendarDays, Clock, AlertTriangle, XCircle } from "lucide-react";
+import { Loader2, Search, ShieldAlert, Activity, Users, CreditCard, Power, PowerOff, RefreshCw, CalendarDays, Clock, AlertTriangle, XCircle, ChevronDown } from "lucide-react";
 
 interface Shop {
     id: string;
@@ -14,6 +14,58 @@ interface Shop {
     status: string;
     created_at: string;
 }
+
+// Custom UI Component to replace the ugly native HTML <select> dropdowns
+const FilterDropdown = ({ value, options, onChange }: { value: string, options: { value: string, label: string }[], onChange: (val: string) => void }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedLabel = options.find((o) => o.value === value)?.label || value;
+
+    return (
+        <div className="relative w-full md:w-auto shrink-0" ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full bg-background border border-border rounded-lg flex items-center justify-between px-3 py-2.5 shadow-sm transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20 md:min-w-[130px]"
+            >
+                <span className="text-foreground text-sm font-bold truncate pr-4">{selectedLabel}</span>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute top-full right-0 mt-1.5 w-full md:min-w-[130px] bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="py-1 max-h-[250px] overflow-y-auto custom-scrollbar">
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-muted ${value === opt.value ? 'bg-primary/10 text-primary font-bold' : 'text-foreground font-medium'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function SuperAdminDashboard() {
     const router = useRouter();
@@ -149,22 +201,22 @@ export default function SuperAdminDashboard() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 transition-colors">
+        <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500 transition-colors pb-10">
 
             {/* Admin Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pb-2 border-b border-border">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pb-4 border-b border-border">
                 <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <ShieldAlert className="w-4 h-4 text-destructive" />
-                        <span className="text-[10px] font-mono font-bold text-destructive tracking-widest uppercase">Level 4 Clearance Active</span>
+                    <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                        <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive" />
+                        <span className="text-[9px] sm:text-[10px] font-mono font-bold text-destructive tracking-widest uppercase">Level 4 Clearance Active</span>
                     </div>
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight">Platform Overview</h1>
-                    <p className="text-muted-foreground text-sm mt-1 font-medium">Global SaaS metrics and top-level tenant monitoring.</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Platform Overview</h1>
+                    <p className="text-muted-foreground text-xs sm:text-sm mt-1 font-medium">Global SaaS metrics and top-level tenant monitoring.</p>
                 </div>
                 <button
                     onClick={verifySuperAdminAndFetch}
                     disabled={isRefreshing}
-                    className="px-4 py-2 bg-card hover:bg-muted border border-border text-foreground text-sm font-bold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm"
+                    className="w-full md:w-auto px-4 py-2.5 sm:py-2 bg-card hover:bg-muted border border-border text-foreground text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm shrink-0"
                 >
                     <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
                     {isRefreshing ? "Syncing..." : "Sync Data"}
@@ -172,32 +224,32 @@ export default function SuperAdminDashboard() {
             </div>
 
             {/* SaaS Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-card border border-primary/30 p-6 rounded-2xl shadow-sm relative overflow-hidden transition-colors duration-300">
-                    <CreditCard className="w-16 h-16 absolute -right-4 -bottom-4 text-primary/10" />
-                    <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wider">Active MRR</p>
-                    <p className="text-3xl font-bold text-foreground">₹{metrics.totalMrr.toLocaleString()}</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="bg-card border border-primary/30 p-4 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden transition-colors duration-300">
+                    <CreditCard className="w-12 h-12 sm:w-16 sm:h-16 absolute -right-3 -bottom-3 sm:-right-4 sm:-bottom-4 text-primary/10" />
+                    <p className="text-[10px] sm:text-xs font-bold text-muted-foreground mb-1.5 sm:mb-2 uppercase tracking-wider">Active MRR</p>
+                    <p className="text-xl sm:text-3xl font-bold text-foreground">₹{metrics.totalMrr.toLocaleString()}</p>
                 </div>
-                <div className="bg-card border border-emerald-500/30 p-6 rounded-2xl shadow-sm relative overflow-hidden transition-colors duration-300">
-                    <Activity className="w-16 h-16 absolute -right-4 -bottom-4 text-emerald-500/10" />
-                    <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wider">Active Tenants</p>
-                    <p className="text-3xl font-bold text-foreground">{metrics.activeShops}</p>
+                <div className="bg-card border border-emerald-500/30 p-4 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden transition-colors duration-300">
+                    <Activity className="w-12 h-12 sm:w-16 sm:h-16 absolute -right-3 -bottom-3 sm:-right-4 sm:-bottom-4 text-emerald-500/10" />
+                    <p className="text-[10px] sm:text-xs font-bold text-muted-foreground mb-1.5 sm:mb-2 uppercase tracking-wider">Active Tenants</p>
+                    <p className="text-xl sm:text-3xl font-bold text-foreground">{metrics.activeShops}</p>
                 </div>
-                <div className="bg-card border border-warning/30 p-6 rounded-2xl shadow-sm relative overflow-hidden transition-colors duration-300">
-                    <Clock className="w-16 h-16 absolute -right-4 -bottom-4 text-warning/10" />
-                    <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wider">Pending KYC</p>
-                    <p className="text-3xl font-bold text-warning">{metrics.pendingShops}</p>
+                <div className="bg-card border border-warning/30 p-4 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden transition-colors duration-300">
+                    <Clock className="w-12 h-12 sm:w-16 sm:h-16 absolute -right-3 -bottom-3 sm:-right-4 sm:-bottom-4 text-warning/10" />
+                    <p className="text-[10px] sm:text-xs font-bold text-muted-foreground mb-1.5 sm:mb-2 uppercase tracking-wider">Pending KYC</p>
+                    <p className="text-xl sm:text-3xl font-bold text-warning">{metrics.pendingShops}</p>
                 </div>
-                <div className="bg-card border border-destructive/30 p-6 rounded-2xl shadow-sm relative overflow-hidden transition-colors duration-300">
-                    <Users className="w-16 h-16 absolute -right-4 -bottom-4 text-destructive/5" />
-                    <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wider">Suspended</p>
-                    <p className="text-3xl font-bold text-destructive">{metrics.suspendedShops}</p>
+                <div className="bg-card border border-destructive/30 p-4 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden transition-colors duration-300">
+                    <Users className="w-12 h-12 sm:w-16 sm:h-16 absolute -right-3 -bottom-3 sm:-right-4 sm:-bottom-4 text-destructive/5" />
+                    <p className="text-[10px] sm:text-xs font-bold text-muted-foreground mb-1.5 sm:mb-2 uppercase tracking-wider">Suspended</p>
+                    <p className="text-xl sm:text-3xl font-bold text-destructive">{metrics.suspendedShops}</p>
                 </div>
             </div>
 
             {/* Controls */}
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-card p-4 rounded-xl border border-border shadow-sm transition-colors duration-300">
-                <div className="relative w-full md:w-96 group">
+            <div className="flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-start md:items-center bg-card p-3 sm:p-4 rounded-xl border border-border shadow-sm transition-colors duration-300">
+                <div className="relative w-full md:flex-1 group">
                     <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <input
                         type="text"
@@ -207,22 +259,24 @@ export default function SuperAdminDashboard() {
                         className="w-full pl-10 pr-4 py-2.5 bg-background hover:bg-muted border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
                     />
                 </div>
-                <select
+
+                {/* Custom Filter Dropdown */}
+                <FilterDropdown
                     value={planFilter}
-                    onChange={(e) => setPlanFilter(e.target.value as any)}
-                    className="w-full md:w-auto px-4 py-2.5 bg-background hover:bg-muted border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer shadow-sm transition-all font-bold"
-                >
-                    <option value="ALL">All Plans</option>
-                    <option value="PRO">Pro Tier</option>
-                    <option value="GROWTH">Growth Tier</option>
-                    <option value="STARTER">Starter Tier</option>
-                </select>
+                    onChange={(val) => setPlanFilter(val as any)}
+                    options={[
+                        { value: "ALL", label: "All Plans" },
+                        { value: "PRO", label: "Pro Tier" },
+                        { value: "GROWTH", label: "Growth Tier" },
+                        { value: "STARTER", label: "Starter Tier" },
+                    ]}
+                />
             </div>
 
             {/* Tenant Data Table */}
-            <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden transition-colors duration-300">
-                <div className="overflow-x-auto">
-                    <table className="w-full border-collapse whitespace-nowrap text-left">
+            <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden transition-colors duration-300 flex flex-col">
+                <div className="overflow-x-auto custom-scrollbar flex-1">
+                    <table className="w-full border-collapse whitespace-nowrap text-left min-w-[900px]">
                         <thead>
                             <tr className="text-[10px] tracking-widest text-muted-foreground font-mono uppercase border-b border-border bg-muted/30">
                                 <th className="px-6 py-4 font-bold">Pharmacy Profile</th>
@@ -254,9 +308,9 @@ export default function SuperAdminDashboard() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold tracking-wider uppercase border ${shop.status === 'REJECTED' ? 'bg-muted text-muted-foreground border-border' :
-                                                    shop.plan === 'PRO' ? 'bg-primary/10 text-primary border-primary/30' :
-                                                        shop.plan === 'GROWTH' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' :
-                                                            'bg-muted text-foreground border-border'
+                                                shop.plan === 'PRO' ? 'bg-primary/10 text-primary border-primary/30' :
+                                                    shop.plan === 'GROWTH' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' :
+                                                        'bg-muted text-foreground border-border'
                                                 }`}>
                                                 {shop.status === 'REJECTED' ? 'REVOKED' : (shop.plan || "STARTER")}
                                             </span>
@@ -285,37 +339,39 @@ export default function SuperAdminDashboard() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            {shop.status === "PENDING" ? (
-                                                <button
-                                                    onClick={() => router.push(`/admin/verification/${shop.id}`)}
-                                                    className="px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 ml-auto transition-colors bg-warning/10 text-warning border border-warning/20 hover:bg-warning opacity-0 group-hover:opacity-100 cursor-pointer shadow-sm"
-                                                >
-                                                    Review KYC
-                                                </button>
-                                            ) : shop.status === "PENDING_DELETION" ? (
-                                                <button
-                                                    onClick={() => router.push(`/admin/verification/${shop.id}`)}
-                                                    className="px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 ml-auto transition-colors bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white opacity-0 group-hover:opacity-100 cursor-pointer shadow-sm"
-                                                >
-                                                    Manage Deletion
-                                                </button>
-                                            ) : shop.status === "REJECTED" ? (
-                                                <span className="text-sm text-muted-foreground font-mono font-medium">Archived</span>
-                                            ) : (
-                                                <button
-                                                    onClick={() => toggleShopStatus(shop.id, shop.status, shop.name)}
-                                                    className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 ml-auto transition-colors opacity-0 group-hover:opacity-100 cursor-pointer shadow-sm ${shop.status === "SUSPENDED"
+                                            <div className="flex justify-end opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                                {shop.status === "PENDING" ? (
+                                                    <button
+                                                        onClick={() => router.push(`/admin/verification/${shop.id}`)}
+                                                        className="px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 ml-auto transition-colors bg-warning/10 text-warning border border-warning/20 hover:bg-warning hover:text-white cursor-pointer shadow-sm"
+                                                    >
+                                                        Review KYC
+                                                    </button>
+                                                ) : shop.status === "PENDING_DELETION" ? (
+                                                    <button
+                                                        onClick={() => router.push(`/admin/verification/${shop.id}`)}
+                                                        className="px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 ml-auto transition-colors bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white cursor-pointer shadow-sm"
+                                                    >
+                                                        Manage Deletion
+                                                    </button>
+                                                ) : shop.status === "REJECTED" ? (
+                                                    <span className="text-sm text-muted-foreground font-mono font-medium">Archived</span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => toggleShopStatus(shop.id, shop.status, shop.name)}
+                                                        className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 ml-auto transition-colors cursor-pointer shadow-sm ${shop.status === "SUSPENDED"
                                                             ? "bg-card border border-border hover:bg-muted text-foreground"
                                                             : "bg-destructive/10 border border-destructive/20 hover:bg-destructive text-destructive hover:text-white"
-                                                        }`}
-                                                >
-                                                    {shop.status === "SUSPENDED" ? (
-                                                        <>Restore Access</>
-                                                    ) : (
-                                                        <><Power className="w-3 h-3" /> Suspend Auth</>
-                                                    )}
-                                                </button>
-                                            )}
+                                                            }`}
+                                                    >
+                                                        {shop.status === "SUSPENDED" ? (
+                                                            <>Restore Access</>
+                                                        ) : (
+                                                            <><Power className="w-3 h-3" /> Suspend Auth</>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

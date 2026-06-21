@@ -26,16 +26,20 @@ export function FAQSection() {
     const [openIndex, setOpenIndex] = useState<number | null>(0);
 
     return (
-        <section id="faq" className="py-24 bg-muted/20 border-t border-border relative transition-colors duration-300">
-            <div className="max-w-4xl mx-auto px-6 md:px-16">
-                <div className="text-center mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4 tracking-tight">
+        <section id="faq" className="py-16 sm:py-24 bg-muted/20 border-t border-border relative transition-colors duration-300">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-16">
+
+                {/* Section Header */}
+                <div className="text-center mb-10 sm:mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-foreground mb-3 sm:mb-4 tracking-tight px-2">
                         Frequently Asked Questions
                     </h2>
-                    <p className="text-muted-foreground text-lg font-medium">Everything you need to know about the product and billing.</p>
+                    <p className="text-muted-foreground text-sm sm:text-lg font-medium px-4">
+                        Everything you need to know about the product and billing.
+                    </p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                     {faqs.map((faq, index) => (
                         <div
                             key={index}
@@ -43,16 +47,16 @@ export function FAQSection() {
                         >
                             <button
                                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                                className="w-full flex items-center justify-between p-6 text-left focus:outline-none cursor-pointer"
+                                className="w-full flex items-center justify-between p-4 sm:p-6 text-left focus:outline-none cursor-pointer"
                             >
-                                <span className="font-bold text-foreground pr-8">{faq.question}</span>
-                                <ChevronDown className={`w-5 h-5 text-primary transition-transform duration-300 shrink-0 ${openIndex === index ? 'rotate-180' : ''}`} />
+                                <span className="font-bold text-foreground text-sm sm:text-base pr-4 sm:pr-8">{faq.question}</span>
+                                <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-primary transition-transform duration-300 shrink-0 ${openIndex === index ? 'rotate-180' : ''}`} />
                             </button>
 
                             <div
                                 className={`overflow-hidden transition-all duration-300 ease-in-out ${openIndex === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
                             >
-                                <p className="p-6 pt-0 text-muted-foreground text-sm leading-relaxed border-t border-border/50 mt-2 font-medium">
+                                <p className="p-4 sm:p-6 pt-0 sm:pt-0 text-muted-foreground text-xs sm:text-sm leading-relaxed border-t border-border/50 mt-1 sm:mt-2 font-medium">
                                     {faq.answer}
                                 </p>
                             </div>

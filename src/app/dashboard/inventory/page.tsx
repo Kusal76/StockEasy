@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSearchParams } from "next/navigation";
-import { Search, Loader2, Trash2, Edit, AlertTriangle, X, Save } from "lucide-react";
+import { Search, Loader2, Trash2, Edit, AlertTriangle, X, Save, PackageSearch } from "lucide-react"; // Added PackageSearch for empty state
 
 interface InventoryItem {
     id: string;
@@ -187,28 +187,29 @@ export default function InventoryOverviewPage() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto animate-in fade-in duration-500 space-y-8 relative">
+        <div className="max-w-7xl mx-auto animate-in fade-in duration-500 space-y-6 sm:space-y-8 relative pb-10">
 
+            {/* EDIT BATCH MODAL */}
             {editingItem && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-                    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                        <div className="flex justify-between items-center p-6 border-b border-border bg-muted/30">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in duration-200">
+                    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]">
+                        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-border bg-muted/30 shrink-0">
                             <div>
                                 <h3 className="font-bold text-foreground text-lg">Edit Batch</h3>
-                                <p className="text-xs text-muted-foreground mt-1">{editingItem.medicine_name} (Batch: {editingItem.batch_number})</p>
+                                <p className="text-xs text-muted-foreground mt-1 truncate max-w-[200px] sm:max-w-xs">{editingItem.medicine_name} (Batch: {editingItem.batch_number})</p>
                             </div>
-                            <button onClick={() => setEditingItem(null)} className="text-muted-foreground hover:text-foreground transition-colors">
+                            <button onClick={() => setEditingItem(null)} className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-muted rounded-lg shrink-0">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <form onSubmit={handleSaveEdit} className="p-6 space-y-5">
+                        <form onSubmit={handleSaveEdit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto custom-scrollbar">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Quantity</label>
                                 <input
                                     type="number" min="0" required
                                     value={editingItem.quantity}
                                     onChange={e => setEditingItem({ ...editingItem, quantity: parseInt(e.target.value) || 0 })}
-                                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+                                    className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -217,7 +218,7 @@ export default function InventoryOverviewPage() {
                                     type="number" step="0.01" required
                                     value={editingItem.mrp}
                                     onChange={e => setEditingItem({ ...editingItem, mrp: parseFloat(e.target.value) || 0 })}
-                                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+                                    className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -226,15 +227,15 @@ export default function InventoryOverviewPage() {
                                     type="date" required
                                     value={editingItem.expiry_date.split('T')[0]}
                                     onChange={e => setEditingItem({ ...editingItem, expiry_date: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+                                    className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                                     style={{ colorScheme: 'dark' }}
                                 />
                             </div>
-                            <div className="pt-4 flex gap-3">
-                                <button type="button" onClick={() => setEditingItem(null)} className="flex-1 px-4 py-2.5 rounded-xl font-bold text-muted-foreground bg-secondary hover:bg-muted transition-colors">
+                            <div className="pt-2 sm:pt-4 flex flex-col-reverse sm:flex-row gap-3">
+                                <button type="button" onClick={() => setEditingItem(null)} className="w-full sm:w-1/2 px-4 py-2.5 rounded-xl font-bold text-muted-foreground bg-secondary hover:bg-muted transition-colors">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={isSaving} className="flex-1 px-4 py-2.5 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                                <button type="submit" disabled={isSaving} className="w-full sm:w-1/2 px-4 py-2.5 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
                                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
                                 </button>
                             </div>
@@ -243,25 +244,27 @@ export default function InventoryOverviewPage() {
                 </div>
             )}
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            {/* HEADER & GLOBAL ACTIONS */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 sm:gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Inventory Overview</h1>
-                    <p className="text-muted-foreground">Monitor real-time stock levels, valuations, and shortages</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mb-1 sm:mb-2">Inventory Overview</h1>
+                    <p className="text-muted-foreground text-sm">Monitor real-time stock levels, valuations, and shortages</p>
                 </div>
 
-                <div className="relative w-full md:w-80">
-                    <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <div className="relative w-full lg:w-80 shrink-0">
+                    <Search className="w-4 h-4 sm:w-5 sm:h-5 absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
                         type="text"
                         placeholder="Search medicines or batches..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors shadow-sm"
+                        className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 bg-card border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors shadow-sm"
                     />
                 </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            {/* FILTER PILLS */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 {[
                     { label: "All", value: "All" },
                     { label: "Expiring soon", value: "Expiring" },
@@ -275,7 +278,7 @@ export default function InventoryOverviewPage() {
                             setActiveFilter(filter.value as any);
                             if (filter.value !== "Dealer") setDealerSearch("");
                         }}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeFilter === filter.value
+                        className={`px-4 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${activeFilter === filter.value
                             ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(110,229,145,0.2)]"
                             : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                             }`}
@@ -284,6 +287,7 @@ export default function InventoryOverviewPage() {
                     </button>
                 ))}
 
+                {/* DEALER SEARCH INPUT */}
                 {activeFilter === "Dealer" && (
                     <input
                         type="text"
@@ -291,33 +295,35 @@ export default function InventoryOverviewPage() {
                         autoFocus
                         value={dealerSearch}
                         onChange={(e) => setDealerSearch(e.target.value)}
-                        className="ml-2 px-4 py-2 bg-background border border-primary/50 rounded-lg text-sm text-foreground focus:outline-none shadow-[0_0_10px_rgba(110,229,145,0.1)] animate-in slide-in-from-left-2 duration-300"
+                        className="w-full sm:w-auto mt-2 sm:mt-0 sm:ml-2 px-4 py-2 bg-background border border-primary/50 rounded-lg text-sm text-foreground focus:outline-none shadow-[0_0_10px_rgba(110,229,145,0.1)] animate-in slide-in-from-top-2 sm:slide-in-from-left-2 duration-300"
                     />
                 )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
-                    <p className="text-xs font-bold text-muted-foreground mb-3">Total SKUs</p>
-                    <p className="text-4xl font-bold text-foreground tracking-tight">{kpis.skus}</p>
+            {/* KPI GRID */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="bg-card border border-border p-4 sm:p-6 rounded-xl shadow-sm">
+                    <p className="text-[10px] sm:text-xs font-bold text-muted-foreground mb-2 sm:mb-3">Total SKUs</p>
+                    <p className="text-2xl sm:text-4xl font-bold text-foreground tracking-tight">{kpis.skus}</p>
                 </div>
-                <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
-                    <p className="text-xs font-bold text-muted-foreground mb-3">Expiring ≤90d</p>
-                    <p className="text-4xl font-bold text-[#F59E0B] tracking-tight">{kpis.expiring}</p>
+                <div className="bg-card border border-border p-4 sm:p-6 rounded-xl shadow-sm">
+                    <p className="text-[10px] sm:text-xs font-bold text-muted-foreground mb-2 sm:mb-3">Expiring ≤90d</p>
+                    <p className="text-2xl sm:text-4xl font-bold text-[#F59E0B] tracking-tight">{kpis.expiring}</p>
                 </div>
-                <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
-                    <p className="text-xs font-bold text-muted-foreground mb-3">Out of stock</p>
-                    <p className="text-4xl font-bold text-destructive/90 tracking-tight">{kpis.out}</p>
+                <div className="bg-card border border-border p-4 sm:p-6 rounded-xl shadow-sm">
+                    <p className="text-[10px] sm:text-xs font-bold text-muted-foreground mb-2 sm:mb-3">Out of stock</p>
+                    <p className="text-2xl sm:text-4xl font-bold text-destructive/90 tracking-tight">{kpis.out}</p>
                 </div>
-                <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
-                    <p className="text-xs font-bold text-muted-foreground mb-3">Dead stock</p>
-                    <p className="text-4xl font-bold text-muted-foreground tracking-tight">{kpis.dead}</p>
+                <div className="bg-card border border-border p-4 sm:p-6 rounded-xl shadow-sm">
+                    <p className="text-[10px] sm:text-xs font-bold text-muted-foreground mb-2 sm:mb-3">Dead stock</p>
+                    <p className="text-2xl sm:text-4xl font-bold text-muted-foreground tracking-tight">{kpis.dead}</p>
                 </div>
             </div>
 
+            {/* MAIN TABLE */}
             <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
-                <div className="overflow-x-auto min-h-[400px]">
-                    <table className="w-full border-collapse whitespace-nowrap">
+                <div className="overflow-x-auto custom-scrollbar min-h-[400px]">
+                    <table className="w-full border-collapse whitespace-nowrap min-w-[900px]">
                         <thead>
                             <tr className="text-xs tracking-wider text-muted-foreground font-mono border-b border-border bg-muted/30">
                                 <th className="px-6 py-5 font-bold uppercase text-left">Medicine</th>
@@ -341,6 +347,7 @@ export default function InventoryOverviewPage() {
                             ) : displayData.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="px-6 py-20 text-center text-muted-foreground">
+                                        <PackageSearch className="w-12 h-12 mx-auto mb-4 opacity-50" />
                                         <p className="text-lg font-medium text-foreground mb-1">No batches found</p>
                                         <p className="text-sm">Try adjusting your filters or search query.</p>
                                     </td>
@@ -348,7 +355,7 @@ export default function InventoryOverviewPage() {
                             ) : (
                                 displayData.map((item) => (
                                     <tr key={item.id} className="hover:bg-muted/50 transition-colors group">
-                                        <td className="px-6 py-4 font-bold text-foreground text-sm text-left">{item.medicine_name}</td>
+                                        <td className="px-6 py-4 font-bold text-foreground text-sm text-left max-w-[200px] truncate block">{item.medicine_name}</td>
                                         <td className="px-6 py-4 text-sm text-muted-foreground text-left">{item.category}</td>
                                         <td className="px-6 py-4 text-sm text-foreground font-mono text-right">₹{item.mrp.toFixed(2)}</td>
                                         <td className="px-6 py-4 text-sm text-muted-foreground font-mono text-center">
@@ -380,17 +387,18 @@ export default function InventoryOverviewPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {/* FIX: Buttons visible on mobile, hidden on hover for desktop */}
+                                            <div className="flex justify-end gap-4 sm:gap-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => setEditingItem(item)}
-                                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                                    className="text-muted-foreground hover:text-foreground transition-colors p-2 sm:p-1 cursor-pointer"
                                                     title="Edit Batch"
                                                 >
                                                     <Edit className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(item.id, item.medicine_name, item.batch_number)}
-                                                    className="text-destructive/70 hover:text-destructive transition-colors"
+                                                    className="text-destructive/70 hover:text-destructive transition-colors p-2 sm:p-1 cursor-pointer"
                                                     title="Delete Batch"
                                                 >
                                                     <Trash2 className="w-4 h-4" />

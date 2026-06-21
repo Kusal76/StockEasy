@@ -1,10 +1,77 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import { LineChart, BarChart, PieChart, Pie, Cell, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
-import { Banknote, Receipt, AlertTriangle, Ban, Loader2, ChevronDown, Clock, PieChart as PieChartIcon, TrendingUp, Lock } from "lucide-react";
+import { Banknote, Receipt, AlertTriangle, Ban, Loader2, ChevronDown, Clock, PieChart as PieChartIcon, TrendingUp, Lock, CalendarDays } from "lucide-react";
+
+// Custom UI Component for the Filter Dropdown
+const FilterDropdown = ({
+    value,
+    options,
+    onChange,
+    icon: Icon,
+    className
+}: {
+    value: string,
+    options: { value: string, label: string }[],
+    onChange: (val: string) => void,
+    icon?: any,
+    className?: string
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedLabel = options.find((o) => o.value === value)?.label || value;
+
+    return (
+        <div className="relative w-full sm:w-auto shrink-0" ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className={className || "w-full bg-card border border-border rounded-xl flex items-center justify-between px-3 py-2 sm:px-4 sm:py-2.5 shadow-sm transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20 sm:min-w-[150px]"}
+            >
+                <div className="flex items-center gap-2 pr-4">
+                    {Icon && <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground shrink-0" />}
+                    <span className="text-foreground text-xs sm:text-sm font-bold truncate">{selectedLabel}</span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute top-full right-0 mt-1.5 w-full sm:min-w-[150px] bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="py-1 max-h-[250px] overflow-y-auto custom-scrollbar">
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm transition-colors hover:bg-muted ${value === opt.value ? 'bg-primary/10 text-primary font-bold' : 'text-foreground font-medium'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function AnalyticsDashboard() {
     const router = useRouter();
@@ -41,11 +108,9 @@ export default function AnalyticsDashboard() {
         checkAuthAndLoad();
     }, [timeRange]);
 
-    // 1. ADD THESE STATES AT THE TOP OF AnalyticsDashboard
     const [isStaff, setIsStaff] = useState(false);
     const [userEmail, setUserEmail] = useState("");
 
-    // 2. REPLACE checkAuthAndLoad WITH THIS
     const checkAuthAndLoad = async () => {
         if (salesData.length === 0) setIsAuthorizing(true);
         setIsLoading(true);
@@ -89,21 +154,20 @@ export default function AnalyticsDashboard() {
         }
     };
 
-    // 3. ADD THIS RENDER BLOCK RIGHT AFTER `if (isAuthorizing) { return (...) }`
     // --- RESTRICTED ACCESS SCREEN FOR STAFF ---
     if (isStaff) {
         return (
-            <div className="max-w-2xl mx-auto mt-20 animate-in fade-in duration-500 transition-colors duration-300">
-                <div className="bg-card border border-destructive/30 rounded-2xl shadow-xl p-10 flex flex-col items-center text-center relative overflow-hidden">
+            <div className="max-w-2xl mx-auto mt-10 md:mt-20 animate-in fade-in duration-500 transition-colors duration-300 p-4">
+                <div className="bg-card border border-destructive/30 rounded-2xl shadow-xl p-6 sm:p-10 flex flex-col items-center text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-destructive to-transparent opacity-50"></div>
-                    <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mb-6 border border-destructive/20 shadow-sm">
-                        <Ban className="w-10 h-10 text-destructive" />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-destructive/10 rounded-full flex items-center justify-center mb-6 border border-destructive/20 shadow-sm">
+                        <Ban className="w-8 h-8 sm:w-10 sm:h-10 text-destructive" />
                     </div>
-                    <h1 className="text-3xl font-bold text-foreground mb-3">Access Restricted</h1>
-                    <p className="text-muted-foreground mb-6 max-w-md leading-relaxed font-medium">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">Access Restricted</h1>
+                    <p className="text-muted-foreground mb-6 max-w-md leading-relaxed font-medium text-sm sm:text-base">
                         Your account is provisioned with <strong>Staff</strong> privileges. Enterprise analytics, financial insights, and predictive forecasting are strictly restricted to the Shop Owner.
                     </p>
-                    <div className="px-6 py-3 bg-secondary border border-border rounded-xl text-sm font-mono text-muted-foreground shadow-sm">
+                    <div className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-secondary border border-border rounded-xl text-xs sm:text-sm font-mono text-muted-foreground shadow-sm truncate">
                         Logged in as: <span className="text-foreground font-bold">{userEmail}</span>
                     </div>
                 </div>
@@ -273,19 +337,19 @@ export default function AnalyticsDashboard() {
     // --- GATED ACCESS SCREEN ---
     if (shopPlan !== "PRO") {
         return (
-            <div className="max-w-2xl mx-auto mt-20 animate-in fade-in duration-500 transition-colors duration-300">
-                <div className="bg-card border border-primary/30 rounded-2xl shadow-xl p-10 flex flex-col items-center text-center relative overflow-hidden">
+            <div className="max-w-2xl mx-auto mt-10 md:mt-20 animate-in fade-in duration-500 transition-colors duration-300 p-4">
+                <div className="bg-card border border-primary/30 rounded-2xl shadow-xl p-6 sm:p-10 flex flex-col items-center text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50"></div>
-                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 border border-primary/20 shadow-sm">
-                        <Lock className="w-10 h-10 text-primary" />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 border border-primary/20 shadow-sm">
+                        <Lock className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
                     </div>
-                    <h1 className="text-3xl font-bold text-foreground mb-3">Enterprise Analytics Locked</h1>
-                    <p className="text-muted-foreground mb-8 leading-relaxed max-w-md font-medium">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">Enterprise Analytics Locked</h1>
+                    <p className="text-muted-foreground mb-8 leading-relaxed max-w-md font-medium text-sm sm:text-base">
                         Deep financial insights, predictive expiry forecasting, and peak traffic tracking are strictly reserved for enterprise pharmacies. Please upgrade to the <strong>Pro Plan</strong> to unlock this module.
                     </p>
                     <button
                         onClick={() => router.push('/dashboard/settings')}
-                        className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-bold shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
+                        className="w-full sm:w-auto bg-primary text-primary-foreground px-8 py-3 rounded-xl font-bold shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
                     >
                         Upgrade to Pro
                     </button>
@@ -297,23 +361,22 @@ export default function AnalyticsDashboard() {
     return (
         <div className="max-w-7xl mx-auto animate-in fade-in duration-500 space-y-6 pb-10 transition-colors duration-300">
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            {/* Header with Custom Dropdown */}
+            <div className="flex flex-row justify-between items-center gap-2 sm:gap-4 mb-2">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-1">Analytics Dashboard</h1>
+                    <h1 className="text-xl sm:text-3xl font-bold text-foreground tracking-tight truncate">Analytics Dashboard</h1>
                 </div>
 
-                <div className="relative bg-card border border-border rounded-xl flex items-center px-4 py-2.5 shadow-sm transition-colors">
-                    <select
-                        value={timeRange}
-                        onChange={(e) => setTimeRange(e.target.value as any)}
-                        className="bg-transparent text-foreground text-sm font-bold focus:outline-none cursor-pointer appearance-none pr-6"
-                    >
-                        <option className="bg-card" value="7d">Last 7 days</option>
-                        <option className="bg-card" value="30d">Last 30 days</option>
-                        <option className="bg-card" value="1y">This Year</option>
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-muted-foreground absolute right-3 pointer-events-none" />
-                </div>
+                <FilterDropdown
+                    value={timeRange}
+                    onChange={(val) => setTimeRange(val as any)}
+                    icon={CalendarDays}
+                    options={[
+                        { value: "7d", label: "Last 7 days" },
+                        { value: "30d", label: "Last 30 days" },
+                        { value: "1y", label: "This Year" },
+                    ]}
+                />
             </div>
 
             {isLoading ? (
@@ -330,54 +393,54 @@ export default function AnalyticsDashboard() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                         <div className="bg-card border border-border p-4 rounded-2xl shadow-sm transition-colors">
-                            <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-muted-foreground">Total Sales</p><Banknote className="w-4 h-4 text-primary" /></div>
-                            <p className="text-xl font-bold text-foreground tracking-tight">₹{kpis.sales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                            <div className="flex justify-between items-start mb-2"><p className="text-[10px] sm:text-xs font-bold text-muted-foreground">Total Sales</p><Banknote className="w-4 h-4 text-primary shrink-0" /></div>
+                            <p className="text-lg sm:text-xl font-bold text-foreground tracking-tight">₹{kpis.sales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                         </div>
                         <div className="bg-card border border-primary/30 p-4 rounded-2xl shadow-sm relative overflow-hidden transition-colors">
                             <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-bl-full"></div>
-                            <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-primary">Est. Gross Profit</p><TrendingUp className="w-4 h-4 text-primary" /></div>
-                            <p className="text-xl font-bold text-foreground tracking-tight">₹{kpis.profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                            <div className="flex justify-between items-start mb-2"><p className="text-[10px] sm:text-xs font-bold text-primary">Est. Profit</p><TrendingUp className="w-4 h-4 text-primary shrink-0" /></div>
+                            <p className="text-lg sm:text-xl font-bold text-foreground tracking-tight">₹{kpis.profit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                         </div>
                         <div className="bg-card border border-border p-4 rounded-2xl shadow-sm transition-colors">
-                            <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-muted-foreground">Total Bills</p><Receipt className="w-4 h-4 text-primary" /></div>
-                            <p className="text-xl font-bold text-foreground tracking-tight">{kpis.bills}</p>
+                            <div className="flex justify-between items-start mb-2"><p className="text-[10px] sm:text-xs font-bold text-muted-foreground">Total Bills</p><Receipt className="w-4 h-4 text-primary shrink-0" /></div>
+                            <p className="text-lg sm:text-xl font-bold text-foreground tracking-tight">{kpis.bills}</p>
                         </div>
                         <div className="bg-card border border-border p-4 rounded-2xl shadow-sm transition-colors">
-                            <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-muted-foreground">Near Expiry</p><AlertTriangle className="w-4 h-4 text-warning" /></div>
-                            <p className="text-xl font-bold text-warning tracking-tight">{kpis.nearExpiry} <span className="text-xs font-medium text-warning/70">items</span></p>
+                            <div className="flex justify-between items-start mb-2"><p className="text-[10px] sm:text-xs font-bold text-muted-foreground">Near Expiry</p><AlertTriangle className="w-4 h-4 text-warning shrink-0" /></div>
+                            <p className="text-lg sm:text-xl font-bold text-warning tracking-tight">{kpis.nearExpiry} <span className="text-[10px] sm:text-xs font-medium text-warning/70">items</span></p>
                         </div>
                         <div className="bg-card border border-border p-4 rounded-2xl shadow-sm transition-colors">
-                            <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-muted-foreground">Dead Stock</p><Ban className="w-4 h-4 text-destructive/80" /></div>
-                            <p className="text-xl font-bold text-destructive/90 tracking-tight">{kpis.deadStock} <span className="text-xs font-medium text-destructive/70">items</span></p>
+                            <div className="flex justify-between items-start mb-2"><p className="text-[10px] sm:text-xs font-bold text-muted-foreground">Dead Stock</p><Ban className="w-4 h-4 text-destructive/80 shrink-0" /></div>
+                            <p className="text-lg sm:text-xl font-bold text-destructive/90 tracking-tight">{kpis.deadStock} <span className="text-[10px] sm:text-xs font-medium text-destructive/70">items</span></p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col min-h-[320px] transition-colors">
-                            <h2 className="font-bold text-foreground text-base mb-6">Sales Volume Over Time</h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col h-[250px] sm:h-[320px] transition-colors">
+                            <h2 className="font-bold text-foreground text-sm sm:text-base mb-4 sm:mb-6">Sales Volume Over Time</h2>
                             <div className="flex-1 w-full relative">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={salesData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                                        <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
-                                        <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
+                                        <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={10} tickLine={false} axisLine={false} />
+                                        <YAxis stroke="var(--muted-foreground)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
                                         <Tooltip cursor={{ fill: 'var(--foreground)', opacity: 0.05 }} contentStyle={{ backgroundColor: "var(--card)", borderColor: "var(--border)", borderRadius: "8px", color: "var(--foreground)" }} />
-                                        <Bar dataKey="sales" fill="#10b981" radius={[4, 4, 0, 0]} barSize={35} />
+                                        <Bar dataKey="sales" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
 
-                        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col min-h-[320px] transition-colors">
-                            <h2 className="font-bold text-foreground text-base mb-2 flex items-center gap-2"><PieChartIcon className="w-4 h-4" /> Revenue by Method</h2>
+                        <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col h-[250px] sm:h-[320px] transition-colors">
+                            <h2 className="font-bold text-foreground text-sm sm:text-base mb-2 flex items-center gap-2"><PieChartIcon className="w-4 h-4" /> Revenue by Method</h2>
                             <div className="flex-1 w-full relative">
                                 {paymentData.length === 0 ? (
                                     <p className="text-muted-foreground text-sm font-medium absolute inset-0 flex items-center justify-center">No payment data</p>
                                 ) : (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
-                                            <Pie data={paymentData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
+                                            <Pie data={paymentData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={5} dataKey="value" stroke="none">
                                                 {paymentData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                                             </Pie>
                                             <Tooltip contentStyle={{ backgroundColor: "var(--card)", borderColor: "var(--border)", borderRadius: "8px", color: "var(--foreground)", fontWeight: "bold" }} formatter={(value) => [`₹${value}`, 'Revenue']} />
@@ -385,10 +448,10 @@ export default function AnalyticsDashboard() {
                                     </ResponsiveContainer>
                                 )}
                             </div>
-                            <div className="flex justify-center gap-4 mt-2 flex-wrap">
+                            <div className="flex justify-center gap-3 sm:gap-4 mt-2 flex-wrap">
                                 {paymentData.map((entry, index) => (
-                                    <div key={entry.name} className="flex items-center gap-2 text-sm text-foreground font-bold">
-                                        <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }} />
+                                    <div key={entry.name} className="flex items-center gap-2 text-[10px] sm:text-sm text-foreground font-bold">
+                                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shadow-sm" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }} />
                                         {entry.name}
                                     </div>
                                 ))}
@@ -396,17 +459,17 @@ export default function AnalyticsDashboard() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col min-h-[280px] transition-colors">
-                            <h2 className="font-bold text-foreground text-base mb-6">Top Moving Medicines</h2>
-                            <div className="flex-1 flex flex-col justify-around">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col min-h-[250px] sm:min-h-[280px] transition-colors">
+                            <h2 className="font-bold text-foreground text-sm sm:text-base mb-4 sm:mb-6">Top Moving Medicines</h2>
+                            <div className="flex-1 flex flex-col justify-around gap-2 sm:gap-0">
                                 {topSellers.map((med, idx) => (
-                                    <div key={idx} className="space-y-2">
+                                    <div key={idx} className="space-y-1.5 sm:space-y-2">
                                         <div className="flex justify-between items-end">
-                                            <span className="text-sm font-bold text-foreground">{med.name}</span>
-                                            <span className="text-xs font-bold text-muted-foreground font-mono">{med.qty} Units</span>
+                                            <span className="text-xs sm:text-sm font-bold text-foreground max-w-[180px] truncate">{med.name}</span>
+                                            <span className="text-[10px] sm:text-xs font-bold text-muted-foreground font-mono">{med.qty} Units</span>
                                         </div>
-                                        <div className="w-full h-2 bg-secondary rounded-full overflow-hidden border border-border/30">
+                                        <div className="w-full h-1.5 sm:h-2 bg-secondary rounded-full overflow-hidden border border-border/30">
                                             <div className="h-full bg-info rounded-full" style={{ width: `${med.percentage}%` }} />
                                         </div>
                                     </div>
@@ -415,8 +478,8 @@ export default function AnalyticsDashboard() {
                             </div>
                         </div>
 
-                        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col min-h-[280px] transition-colors">
-                            <h2 className="font-bold text-foreground text-base mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-warning" /> Peak Biller Hours</h2>
+                        <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col h-[250px] sm:h-[280px] transition-colors">
+                            <h2 className="font-bold text-foreground text-sm sm:text-base mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-warning" /> Peak Biller Hours</h2>
                             <div className="flex-1 w-full relative">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={peakHoursData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
@@ -434,8 +497,8 @@ export default function AnalyticsDashboard() {
                             </div>
                         </div>
 
-                        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col min-h-[280px] transition-colors">
-                            <h2 className="font-bold text-foreground text-base mb-4 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-destructive/80" /> Forecasted Expiry Loss (₹)</h2>
+                        <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col h-[250px] sm:h-[280px] transition-colors">
+                            <h2 className="font-bold text-foreground text-sm sm:text-base mb-4 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-destructive/80" /> Forecasted Expiry Loss (₹)</h2>
                             <div className="flex-1 w-full relative">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={expiryTrendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>

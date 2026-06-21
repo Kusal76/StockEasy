@@ -1,12 +1,64 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Area, AreaChart, BarChart, Bar
 } from "recharts";
 import { supabase } from "../../lib/supabase";
+
+// Custom UI Component to replace the ugly native HTML <select> dropdowns
+const FilterDropdown = ({ value, options, onChange }: { value: string, options: { value: string, label: string }[], onChange: (val: string) => void }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedLabel = options.find((o) => o.value === value)?.label || value;
+
+    return (
+        <div className="relative w-full sm:w-auto shrink-0" ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full bg-card border border-border rounded-lg flex items-center justify-between px-3 py-2 sm:py-2.5 shadow-sm transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20 sm:min-w-[140px]"
+            >
+                <span className="text-foreground text-xs sm:text-sm font-bold truncate pr-4">{selectedLabel}</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute top-full right-0 sm:left-auto mt-1.5 w-full sm:min-w-[140px] bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="py-1 max-h-[250px] overflow-y-auto custom-scrollbar">
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2 text-xs sm:text-sm transition-colors hover:bg-muted ${value === opt.value ? 'bg-primary/10 text-primary font-bold' : 'text-foreground font-medium'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function AnalyticsPage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -198,55 +250,54 @@ export default function AnalyticsPage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[70vh] text-muted-foreground">
                 <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
-                <p className="font-mono text-sm tracking-widest uppercase">Aggregating Actual DB Metrics...</p>
+                <p className="font-mono text-sm tracking-widest uppercase font-bold text-center">Aggregating Actual DB Metrics...</p>
             </div>
         );
     }
 
     return (
-        <div className="max-w-6xl animate-in fade-in duration-500 space-y-6 pb-20">
+        <div className="max-w-7xl mx-auto animate-in fade-in duration-500 space-y-6 sm:space-y-8 pb-20">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h1 className="text-3xl font-bold text-foreground tracking-tight">Platform Analytics</h1>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Platform Analytics</h1>
 
-                <div className="relative inline-block">
-                    <select
-                        value={timeRange}
-                        onChange={(e) => setTimeRange(e.target.value)}
-                        className="appearance-none bg-card border border-border px-4 py-2 pr-10 rounded-lg text-sm text-foreground hover:border-primary/50 transition-colors focus:outline-none focus:border-primary cursor-pointer shadow-sm"
-                    >
-                        <option className="bg-card" value="All Time">All Time</option>
-                        <option className="bg-card" value="This Year">This year</option>
-                        <option className="bg-card" value="This Month">This month</option>
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
+                {/* Custom Filter Dropdown */}
+                <FilterDropdown
+                    value={timeRange}
+                    onChange={setTimeRange}
+                    options={[
+                        { value: "All Time", label: "All Time" },
+                        { value: "This Year", label: "This year" },
+                        { value: "This Month", label: "This month" },
+                    ]}
+                />
             </div>
 
             {/* KPI Cards (Row 1) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div className="bg-card border border-border p-5 rounded-xl shadow-sm transition-colors">
-                    <p className="text-[11px] text-muted-foreground mb-2 font-bold uppercase tracking-wider">Total Shops</p>
-                    <p className="text-2xl font-bold text-foreground">{kpis.totalShops}</p>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                <div className="bg-card border border-border p-4 sm:p-5 rounded-xl shadow-sm transition-colors">
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground mb-1 sm:mb-2 font-bold uppercase tracking-wider">Total Shops</p>
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">{kpis.totalShops}</p>
                 </div>
-                <div className="bg-card border border-border p-5 rounded-xl shadow-sm transition-colors">
-                    <p className="text-[11px] text-emerald-500/80 mb-2 font-bold uppercase tracking-wider">Active</p>
-                    <p className="text-2xl font-bold text-emerald-500">{kpis.activeShops}</p>
+                <div className="bg-card border border-border p-4 sm:p-5 rounded-xl shadow-sm transition-colors">
+                    <p className="text-[10px] sm:text-[11px] text-emerald-500/80 mb-1 sm:mb-2 font-bold uppercase tracking-wider">Active</p>
+                    <p className="text-xl sm:text-2xl font-bold text-emerald-500">{kpis.activeShops}</p>
                 </div>
-                <div className="bg-card border border-border p-5 rounded-xl shadow-sm transition-colors">
-                    <p className="text-[11px] text-warning/80 mb-2 font-bold uppercase tracking-wider">Pending</p>
-                    <p className="text-2xl font-bold text-warning">{kpis.pendingShops}</p>
+                <div className="bg-card border border-border p-4 sm:p-5 rounded-xl shadow-sm transition-colors">
+                    <p className="text-[10px] sm:text-[11px] text-warning/80 mb-1 sm:mb-2 font-bold uppercase tracking-wider">Pending</p>
+                    <p className="text-xl sm:text-2xl font-bold text-warning">{kpis.pendingShops}</p>
                 </div>
-                <div className="bg-card border border-primary/30 p-5 rounded-xl shadow-sm transition-colors">
-                    <p className="text-[11px] text-primary/80 mb-2 font-bold uppercase tracking-wider">Platform GMV</p>
-                    <p className="text-2xl font-bold text-foreground">{formatCurrencyLakhs(kpis.totalGmv)}</p>
+                <div className="bg-card border border-primary/30 p-4 sm:p-5 rounded-xl shadow-sm transition-colors">
+                    <p className="text-[10px] sm:text-[11px] text-primary/80 mb-1 sm:mb-2 font-bold uppercase tracking-wider">Platform GMV</p>
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">{formatCurrencyLakhs(kpis.totalGmv)}</p>
                 </div>
 
-                <div className="bg-card border border-border p-5 rounded-xl shadow-sm relative overflow-hidden z-0 transition-colors">
+                {/* Expiry metric spans 2 columns on mobile so it stays visible */}
+                <div className="col-span-2 lg:col-span-1 bg-card border border-border p-4 sm:p-5 rounded-xl shadow-sm relative overflow-hidden z-0 transition-colors">
                     <div className="absolute top-0 right-0 w-16 h-16 bg-muted rounded-bl-full -mr-4 -mt-4"></div>
-                    <p className="text-[11px] text-muted-foreground mb-1 font-bold uppercase tracking-wider relative z-10">Expiry Loss Prevented</p>
-                    <p className="text-2xl font-bold text-foreground relative z-10">{formatCurrencyLakhs(kpis.expiryLossPrevented)}</p>
-                    <p className="text-[9px] text-muted-foreground/50 mt-1 relative z-10 tracking-widest">*Industry Est.</p>
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground mb-1 sm:mb-1 font-bold uppercase tracking-wider relative z-10">Expiry Loss Prevented</p>
+                    <p className="text-xl sm:text-2xl font-bold text-foreground relative z-10">{formatCurrencyLakhs(kpis.expiryLossPrevented)}</p>
+                    <p className="text-[8px] sm:text-[9px] text-muted-foreground/50 mt-1 relative z-10 tracking-widest">*Industry Est.</p>
                 </div>
             </div>
 
@@ -254,11 +305,11 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Shop Growth Area Chart */}
-                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 shadow-sm h-[340px] flex flex-col transition-colors">
-                    <h2 className="font-semibold text-foreground mb-6">Shop growth (registrations)</h2>
-                    <div className="flex-1 w-full">
+                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm h-72 sm:h-[340px] flex flex-col transition-colors">
+                    <h2 className="font-semibold text-foreground text-sm sm:text-base mb-4 sm:mb-6">Shop growth (registrations)</h2>
+                    <div className="flex-1 w-full min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={registrationData} margin={{ left: -20, bottom: 0, right: 10 }}>
+                            <AreaChart data={registrationData} margin={{ left: -20, bottom: 0, right: 10, top: 10 }}>
                                 <defs>
                                     <linearGradient id="colorReg" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
@@ -266,32 +317,32 @@ export default function AnalyticsPage() {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                                <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                                <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                                <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: "var(--card)", borderColor: "var(--border)", borderRadius: "8px", color: "var(--foreground)" }}
+                                    contentStyle={{ backgroundColor: "var(--card)", borderColor: "var(--border)", borderRadius: "8px", color: "var(--foreground)", fontSize: "12px" }}
                                     itemStyle={{ color: "#10b981", fontWeight: "bold" }}
                                 />
-                                <Area type="monotone" dataKey="registrations" stroke="#10b981" strokeWidth={3} fill="url(#colorReg)" dot={{ r: 4, fill: "var(--card)", stroke: "#10b981", strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                <Area type="monotone" dataKey="registrations" stroke="#10b981" strokeWidth={2.5} fill="url(#colorReg)" dot={{ r: 3, fill: "var(--card)", stroke: "#10b981", strokeWidth: 2 }} activeDot={{ r: 5 }} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
                 {/* Most Active Shops */}
-                <div className="bg-card border border-border rounded-xl p-6 shadow-sm h-[340px] overflow-hidden transition-colors">
-                    <h2 className="font-semibold text-foreground mb-6">Top Revenue Shops</h2>
-                    <div className="space-y-6 mt-2 overflow-y-auto max-h-[240px] custom-scrollbar pr-2">
+                <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm h-72 sm:h-[340px] overflow-hidden transition-colors flex flex-col">
+                    <h2 className="font-semibold text-foreground text-sm sm:text-base mb-4 sm:mb-6 shrink-0">Top Revenue Shops</h2>
+                    <div className="space-y-4 sm:space-y-6 mt-1 overflow-y-auto flex-1 custom-scrollbar pr-2">
                         {topShops.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No sales data recorded yet.</p>
+                            <p className="text-sm text-muted-foreground text-center pt-10">No sales data recorded yet.</p>
                         ) : (
                             topShops.map((s, i) => (
                                 <div key={i}>
-                                    <div className="flex justify-between text-xs mb-2">
-                                        <span className="text-foreground font-medium">{s.name}</span>
-                                        <span className="font-mono text-emerald-500">₹{s.val.toLocaleString()}</span>
+                                    <div className="flex justify-between text-[11px] sm:text-xs mb-1.5 sm:mb-2">
+                                        <span className="text-foreground font-medium truncate pr-2">{s.name}</span>
+                                        <span className="font-mono text-emerald-500 shrink-0">₹{s.val.toLocaleString()}</span>
                                     </div>
-                                    <div className="w-full bg-secondary h-3.5 rounded-sm overflow-hidden border border-border">
+                                    <div className="w-full bg-secondary h-2.5 sm:h-3.5 rounded-sm overflow-hidden border border-border">
                                         <div className="bg-emerald-500 h-full rounded-sm" style={{ width: `${Math.max(s.percentage, 2)}%` }} />
                                     </div>
                                 </div>
@@ -302,36 +353,36 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Aggregate Sales (Row 3 - FULL WIDTH) */}
-            <div className="bg-card border border-border rounded-xl p-6 shadow-sm h-[340px] flex flex-col transition-colors">
-                <h2 className="font-semibold text-foreground mb-6">Aggregate platform sales (₹)</h2>
-                <div className="flex-1 w-full">
+            <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm h-72 sm:h-[340px] flex flex-col transition-colors">
+                <h2 className="font-semibold text-foreground text-sm sm:text-base mb-4 sm:mb-6">Aggregate platform sales (₹)</h2>
+                <div className="flex-1 w-full min-h-0">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={salesData} margin={{ left: -10, bottom: 0 }}>
+                        <BarChart data={salesData} margin={{ left: -15, bottom: 0, top: 10, right: 10 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                            <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={{ stroke: 'var(--border)' }} />
-                            <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} width={80} tickFormatter={(value) => value >= 1000 ? `${value / 1000}k` : value} />
+                            <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={10} tickLine={false} axisLine={{ stroke: 'var(--border)' }} />
+                            <YAxis stroke="var(--muted-foreground)" fontSize={10} tickLine={false} axisLine={false} width={50} tickFormatter={(value) => value >= 1000 ? `${value / 1000}k` : value} />
                             <Tooltip
                                 cursor={{ fill: 'var(--foreground)', opacity: 0.05 }}
-                                contentStyle={{ backgroundColor: "var(--card)", borderColor: "var(--border)", borderRadius: "8px", color: "var(--foreground)" }}
+                                contentStyle={{ backgroundColor: "var(--card)", borderColor: "var(--border)", borderRadius: "8px", color: "var(--foreground)", fontSize: "12px" }}
                                 itemStyle={{ color: "#10b981", fontWeight: "bold" }}
                             />
-                            <Bar dataKey="sales" fill="#10b981" radius={[2, 2, 0, 0]} maxBarSize={60} />
+                            <Bar dataKey="sales" fill="#10b981" radius={[2, 2, 0, 0]} maxBarSize={40} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
             {/* True Geographic Distribution (Row 4 - FULL WIDTH) */}
-            <div className="bg-card border border-border rounded-xl p-6 shadow-sm transition-colors">
-                <h2 className="font-semibold text-foreground mb-8">Shops by location (Parsed)</h2>
-                <div className="space-y-6 w-full pr-4 max-h-[300px] overflow-y-auto custom-scrollbar">
+            <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm transition-colors">
+                <h2 className="font-semibold text-foreground text-sm sm:text-base mb-6 sm:mb-8">Shops by location (Parsed)</h2>
+                <div className="space-y-5 sm:space-y-6 w-full pr-2 sm:pr-4 max-h-[250px] sm:max-h-[300px] overflow-y-auto custom-scrollbar">
                     {stateData.map((s, i) => (
-                        <div key={i} className="flex items-center gap-6">
-                            <div className="w-32 text-sm text-foreground truncate">{s.name}</div>
-                            <div className="flex-1 bg-secondary h-5 rounded-sm border border-border">
+                        <div key={i} className="flex items-center gap-3 sm:gap-6">
+                            <div className="w-24 sm:w-32 text-xs sm:text-sm text-foreground truncate shrink-0">{s.name}</div>
+                            <div className="flex-1 bg-secondary h-4 sm:h-5 rounded-sm border border-border">
                                 <div className="bg-emerald-500 h-full rounded-sm transition-all duration-1000" style={{ width: `${(s.val / Math.max(stateData[0]?.val, 1)) * 100}%` }} />
                             </div>
-                            <div className="w-16 text-right text-xs text-muted-foreground font-mono">{s.val} shops</div>
+                            <div className="w-14 sm:w-16 text-right text-[10px] sm:text-xs text-muted-foreground font-mono shrink-0">{s.val} shops</div>
                         </div>
                     ))}
                 </div>

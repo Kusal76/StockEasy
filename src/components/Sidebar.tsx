@@ -12,7 +12,7 @@ import {
     Pill,
     LogOut,
     Activity,
-    Bot // Import Bot icon for AI Assistant
+    Bot
 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { supabase } from "../app/lib/supabase";
@@ -25,15 +25,13 @@ export default function Sidebar() {
         const fetchRole = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                // 1. Absolute Truth: Check staff profiles first
                 const { data: staffData } = await supabase.from('staff_profiles').select('role').eq('id', user.id).maybeSingle();
 
                 if (staffData) {
                     setUserRole("STAFF");
-                    return; // Stop here, they are definitely staff
+                    return;
                 }
 
-                // 2. Fallback to users table for Owners/Admins
                 const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
                 if (data?.role) {
                     setUserRole(data.role.toUpperCase());
@@ -43,7 +41,6 @@ export default function Sidebar() {
         fetchRole();
     }, []);
 
-    // Base items everyone sees
     let NAV_ITEMS = [
         { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
         { name: "Point of Sale", href: "/dashboard/sell", icon: ShoppingCart },
@@ -51,18 +48,16 @@ export default function Sidebar() {
         { name: "Inventory", href: "/dashboard/inventory", icon: Pill },
     ];
 
-    // Append protected items only if they are an Owner or Admin
     if (userRole === "OWNER" || userRole === "ADMIN" || userRole === "SUPERADMIN") {
         NAV_ITEMS.push({ name: "Staff Mgmt", href: "/dashboard/staff", icon: Users });
         NAV_ITEMS.push({ name: "Analytics", href: "/dashboard/analytics", icon: Activity });
         NAV_ITEMS.push({ name: "AI Assistant", href: "/dashboard/ai", icon: Bot });
     }
 
-    // Settings is always last
     NAV_ITEMS.push({ name: "Settings", href: "/dashboard/settings", icon: Settings });
 
     return (
-        <aside className="w-64 h-screen bg-card border-r border-border flex flex-col transition-colors duration-300 z-50 shadow-sm relative">
+        <aside className="hidden md:flex w-64 h-screen bg-card border-r border-border flex-col transition-colors duration-300 z-50 shadow-sm relative">
 
             {/* Header / Logo Section */}
             <div className="h-16 flex items-center px-6 border-b border-border">
@@ -77,7 +72,6 @@ export default function Sidebar() {
             {/* Main Navigation */}
             <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto custom-scrollbar">
                 {NAV_ITEMS.map((item) => {
-                    // Check if current path starts with the href (for nested routes), except for the main dashboard
                     const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard');
 
                     return (

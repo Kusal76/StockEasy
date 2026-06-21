@@ -8,7 +8,7 @@ import { Search, Bell, LogOut, Settings, User, AlertTriangle, Package, Loader2, 
 interface SearchResult {
     id: string;
     medicine_name: string;
-    generic_name?: string; // <-- Added to pull composition
+    generic_name?: string;
     quantity: number;
     mrp: number;
 }
@@ -122,9 +122,9 @@ export default function DashboardHeader() {
             if (userData?.shop_id) {
                 const { data } = await supabase
                     .from('inventory')
-                    .select('id, medicine_name, generic_name, quantity, mrp') // <-- Pull generic name
+                    .select('id, medicine_name, generic_name, quantity, mrp')
                     .eq('shop_id', userData.shop_id)
-                    .or(`medicine_name.ilike.%${cleanQuery}%,generic_name.ilike.%${cleanQuery}%`) // <-- Dual search logic
+                    .or(`medicine_name.ilike.%${cleanQuery}%,generic_name.ilike.%${cleanQuery}%`)
                     .limit(5);
 
                 setSearchResults(data || []);
@@ -160,39 +160,39 @@ export default function DashboardHeader() {
     };
 
     return (
-        <header className="flex items-center justify-between py-3.5 px-8 bg-card border-b border-border relative z-50 transition-colors duration-300 shadow-sm">
+        <header className="flex items-center justify-between py-3 sm:py-3.5 px-4 sm:px-8 bg-card border-b border-border relative z-50 transition-colors duration-300 shadow-sm gap-2 sm:gap-4">
 
             {/* Left: Global Search */}
-            <div className="relative w-full max-w-md" ref={searchRef}>
+            <div className="relative flex-1 w-full max-w-md" ref={searchRef}>
                 <div className="relative flex items-center group">
-                    <Search className="absolute left-4 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <Search className="absolute left-3 sm:left-4 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search brand or composition..."
-                        className="w-full bg-secondary hover:bg-muted border border-border text-foreground text-sm rounded-full pl-11 pr-4 py-2.5 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 placeholder:text-muted-foreground shadow-sm"
+                        className="w-full bg-secondary hover:bg-muted border border-border text-foreground text-xs sm:text-sm rounded-full pl-9 sm:pl-11 pr-4 py-2 sm:py-2.5 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 placeholder:text-muted-foreground/60 shadow-sm"
                     />
-                    {isSearching && <Loader2 className="absolute right-4 w-4 h-4 text-primary animate-spin" />}
+                    {isSearching && <Loader2 className="absolute right-3 sm:right-4 w-4 h-4 text-primary animate-spin" />}
                 </div>
 
                 {searchQuery.length >= 2 && (
                     <div className="absolute top-full left-0 right-0 mt-2 bg-card/95 backdrop-blur-xl border border-border/60 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 z-50">
                         {searchResults.length > 0 ? (
-                            <ul className="divide-y divide-border/50">
+                            <ul className="divide-y divide-border/50 max-h-[60vh] overflow-y-auto custom-scrollbar">
                                 {searchResults.map((item) => (
                                     <li key={item.id} className="p-3 hover:bg-muted/50 cursor-pointer flex justify-between items-center transition-colors" onClick={() => { setSearchQuery(""); router.push('/dashboard/inventory'); }}>
-                                        <div>
-                                            <p className="text-sm font-semibold text-foreground">{item.medicine_name}</p>
+                                        <div className="min-w-0 pr-2">
+                                            <p className="text-sm font-semibold text-foreground truncate">{item.medicine_name}</p>
                                             {item.generic_name && (
-                                                <p className="text-[10px] font-medium text-muted-foreground mt-0.5 max-w-[200px] truncate">
+                                                <p className="text-[10px] font-medium text-muted-foreground mt-0.5 truncate">
                                                     {item.generic_name}
                                                 </p>
                                             )}
                                             <p className="text-[10px] text-muted-foreground font-mono mt-0.5">MRP: ₹{item.mrp}</p>
                                         </div>
-                                        <div className={`px-2.5 py-1 rounded-md text-[11px] font-semibold font-mono tracking-wide ${item.quantity > 0 ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
-                                            {item.quantity} IN STOCK
+                                        <div className={`shrink-0 px-2.5 py-1 rounded-md text-[10px] sm:text-[11px] font-semibold font-mono tracking-wide ${item.quantity > 0 ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
+                                            {item.quantity} <span className="hidden sm:inline">IN STOCK</span>
                                         </div>
                                     </li>
                                 ))}
@@ -207,21 +207,21 @@ export default function DashboardHeader() {
             </div>
 
             {/* Right: Actions & Profile */}
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1 sm:gap-4 shrink-0">
 
                 {/* Global Refresh Button */}
                 <button
                     onClick={handleRefresh}
                     disabled={isRefreshing}
                     title="Sync Data"
-                    className="p-2.5 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer group"
+                    className="p-2 sm:p-2.5 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-all cursor-pointer group shrink-0"
                 >
                     <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${isRefreshing ? 'animate-spin text-primary' : 'group-hover:rotate-180'}`} />
                 </button>
 
                 {/* Notification Bell */}
-                <div className="relative" ref={notifRef}>
-                    <button onClick={() => setIsNotifOpen(!isNotifOpen)} className="p-2.5 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-all relative cursor-pointer group" title="Notifications">
+                <div className="relative shrink-0" ref={notifRef}>
+                    <button onClick={() => setIsNotifOpen(!isNotifOpen)} className="p-2 sm:p-2.5 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-all relative cursor-pointer group" title="Notifications">
                         <Bell className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
                         {notifications.length > 0 && (
                             <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#F59E0B] border-[1.5px] border-card rounded-full shadow-[0_0_8px_rgba(245,158,11,0.6)] animate-pulse"></span>
@@ -229,7 +229,7 @@ export default function DashboardHeader() {
                     </button>
 
                     {isNotifOpen && (
-                        <div className="absolute right-0 mt-3 w-80 bg-card/95 backdrop-blur-xl border border-border/60 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 z-50">
+                        <div className="absolute right-[-3rem] sm:right-0 mt-3 w-[calc(100vw-2rem)] max-w-[320px] sm:w-80 bg-card/95 backdrop-blur-xl border border-border/60 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 z-50">
                             <div className="p-3.5 border-b border-border bg-muted/30 flex justify-between items-center">
                                 <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                                     Alerts
@@ -249,18 +249,18 @@ export default function DashboardHeader() {
                                             <div key={notif.id} className="p-4 hover:bg-muted/50 transition-colors flex gap-3 items-start group">
                                                 <AlertTriangle className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
                                                 <div
-                                                    className="flex-1 cursor-pointer"
+                                                    className="flex-1 cursor-pointer min-w-0"
                                                     onClick={() => { setIsNotifOpen(false); router.push('/dashboard/inventory'); }}
                                                 >
-                                                    <p className="text-sm font-semibold text-foreground leading-tight mb-1.5">{notif.medicine_name}</p>
+                                                    <p className="text-sm font-semibold text-foreground leading-tight mb-1.5 truncate">{notif.medicine_name}</p>
                                                     <div className="flex items-center justify-between">
-                                                        <p className="text-[10px] text-muted-foreground font-mono bg-background border border-border px-1.5 py-0.5 rounded shadow-sm">Batch: {notif.batch_number}</p>
-                                                        <p className="text-[11px] text-[#F59E0B] font-semibold">{notif.quantity} left</p>
+                                                        <p className="text-[10px] text-muted-foreground font-mono bg-background border border-border px-1.5 py-0.5 rounded shadow-sm truncate max-w-[120px]">Batch: {notif.batch_number}</p>
+                                                        <p className="text-[11px] text-[#F59E0B] font-semibold shrink-0">{notif.quantity} left</p>
                                                     </div>
                                                 </div>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); dismissNotification(notif.id); }}
-                                                    className="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground transition-all p-1 cursor-pointer"
+                                                    className="text-muted-foreground opacity-100 sm:opacity-0 group-hover:opacity-100 hover:text-foreground transition-all p-1 cursor-pointer shrink-0"
                                                     title="Dismiss"
                                                 >
                                                     <X className="w-3.5 h-3.5" />
@@ -285,19 +285,19 @@ export default function DashboardHeader() {
                 <div className="h-6 w-px bg-border mx-1 hidden sm:block"></div>
 
                 {/* Profile Badge & Dropdown */}
-                <div className="relative" ref={profileRef}>
+                <div className="relative shrink-0" ref={profileRef}>
                     <button
                         onClick={() => setIsProfileOpen(!isProfileOpen)}
-                        className="flex items-center gap-3 pl-2 hover:opacity-80 transition-opacity cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className="flex items-center gap-3 pl-1 sm:pl-2 hover:opacity-80 transition-opacity cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                         <div className="text-right hidden sm:block">
                             <p className="text-sm font-semibold text-foreground">Hi, {userName.split(' ')[0]}</p>
                         </div>
-                        <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary overflow-hidden shadow-sm">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary overflow-hidden shadow-sm shrink-0">
                             {shopLogo ? (
                                 <img src={shopLogo} alt="Shop Logo" className="w-full h-full object-cover" />
                             ) : (
-                                <User className="w-4 h-4" />
+                                <User className="w-4 h-4 sm:w-5 sm:h-5" />
                             )}
                         </div>
                     </button>

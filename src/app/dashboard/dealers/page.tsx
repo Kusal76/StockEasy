@@ -147,7 +147,6 @@ export default function DealersPage() {
         setValidationError("");
 
         // --- FEATURE GATING RESTRICTION ---
-        // If they click 'Add Dealer' (no dealer passed in) AND they are at their limit
         if (!dealer && isDealersFull) {
             alert(`${shopPlan} Plan Limit Reached: You can only have ${currentLimits.maxDealers} dealers on this plan. Please upgrade to the next tier to add more suppliers.`);
             router.push('/dashboard/settings');
@@ -175,12 +174,10 @@ export default function DealersPage() {
         e.preventDefault();
         setValidationError("");
 
-        // Secondary check just in case
         if (!editingId && isDealersFull) {
             return setValidationError(`${shopPlan} Plan Limit Reached. Please upgrade.`);
         }
 
-        // STRICT VALIDATIONS
         if (formData.gst_number.length !== 15) {
             return setValidationError("GST Number must be exactly 15 characters.");
         }
@@ -203,13 +200,11 @@ export default function DealersPage() {
             const cleanName = formData.name.trim();
 
             if (editingId) {
-                // Cascading Name Update
                 const oldDealer = dealers.find(d => d.id === editingId);
 
                 const { error } = await supabase.from('dealers').update({ ...formData, name: cleanName }).eq('id', editingId);
                 if (error) throw error;
 
-                // Update inventory if name changed to keep data linked
                 if (oldDealer && oldDealer.name !== cleanName) {
                     await supabase
                         .from('inventory')
@@ -258,18 +253,18 @@ export default function DealersPage() {
     };
 
     return (
-        <div className="max-w-6xl mx-auto animate-in fade-in duration-500 space-y-8 relative pb-10">
+        <div className="max-w-6xl mx-auto animate-in fade-in duration-500 space-y-6 sm:space-y-8 relative pb-10">
 
             {/* ADD/EDIT MODAL OVERLAY */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-                    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in duration-200">
+                    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]">
 
-                        <div className="flex justify-between items-center p-6 border-b border-border bg-muted/20 shrink-0">
+                        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-border bg-muted/20 shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-primary/10 rounded-lg"><Building2 className="w-5 h-5 text-primary" /></div>
                                 <div>
-                                    <h3 className="font-bold text-foreground text-lg">{editingId ? 'Edit Dealer Profile' : 'Register New Dealer'}</h3>
+                                    <h3 className="font-bold text-foreground text-base sm:text-lg">{editingId ? 'Edit Dealer Profile' : 'Register New Dealer'}</h3>
                                     <p className="text-xs text-muted-foreground mt-0.5">Enter the supplier's business and contact details.</p>
                                 </div>
                             </div>
@@ -279,17 +274,17 @@ export default function DealersPage() {
                         </div>
 
                         {validationError && (
-                            <div className="mx-6 mt-6 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-2 text-destructive text-sm font-bold animate-in fade-in">
-                                <AlertTriangle className="w-4 h-4" /> {validationError}
+                            <div className="mx-4 sm:mx-6 mt-4 sm:mt-6 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-2 text-destructive text-sm font-bold animate-in fade-in">
+                                <AlertTriangle className="w-4 h-4 shrink-0" /> {validationError}
                             </div>
                         )}
 
-                        <div className="overflow-y-auto p-6 custom-scrollbar">
-                            <form id="dealer-form" onSubmit={handleSave} className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+                            <form id="dealer-form" onSubmit={handleSave} className="space-y-4 sm:space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                     <div className="space-y-2">
                                         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Business / Agency Name *</label>
-                                        <input type="text" required value={formData.name} onChange={e => { setFormData({ ...formData, name: e.target.value }); setValidationError(""); }} className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="e.g. Apollo Distributors" />
+                                        <input type="text" required value={formData.name} onChange={e => { setFormData({ ...formData, name: e.target.value }); setValidationError(""); }} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="e.g. Apollo Distributors" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">GST Number *</label>
@@ -303,13 +298,13 @@ export default function DealersPage() {
                                                 setFormData({ ...formData, gst_number: val });
                                                 setValidationError("");
                                             }}
-                                            className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors uppercase"
+                                            className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors uppercase"
                                             placeholder="15 Characters"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Contact Person *</label>
-                                        <input type="text" required value={formData.contact_person} onChange={e => { setFormData({ ...formData, contact_person: e.target.value }); setValidationError(""); }} className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="e.g. Rajesh Kumar" />
+                                        <input type="text" required value={formData.contact_person} onChange={e => { setFormData({ ...formData, contact_person: e.target.value }); setValidationError(""); }} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="e.g. Rajesh Kumar" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Phone Number *</label>
@@ -323,27 +318,27 @@ export default function DealersPage() {
                                                 setFormData({ ...formData, phone: val });
                                                 setValidationError("");
                                             }}
-                                            className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
+                                            className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                                             placeholder="10 Digits"
                                         />
                                     </div>
                                     <div className="space-y-2 md:col-span-2">
                                         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Email Address *</label>
-                                        <input type="email" required value={formData.email} onChange={e => { setFormData({ ...formData, email: e.target.value }); setValidationError(""); }} className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="contact@agency.com" />
+                                        <input type="email" required value={formData.email} onChange={e => { setFormData({ ...formData, email: e.target.value }); setValidationError(""); }} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="contact@agency.com" />
                                     </div>
                                     <div className="space-y-2 md:col-span-2">
                                         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Full Business Address *</label>
-                                        <textarea required value={formData.address} onChange={e => { setFormData({ ...formData, address: e.target.value }); setValidationError(""); }} rows={3} className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors resize-none" placeholder="123 Distributor Lane, Industrial Area..." />
+                                        <textarea required value={formData.address} onChange={e => { setFormData({ ...formData, address: e.target.value }); setValidationError(""); }} rows={3} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors resize-none" placeholder="123 Distributor Lane, Industrial Area..." />
                                     </div>
                                 </div>
                             </form>
                         </div>
 
-                        <div className="p-6 border-t border-border bg-card flex justify-end gap-3 shrink-0">
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl font-bold text-muted-foreground bg-muted hover:bg-muted/80 transition-colors cursor-pointer">
+                        <div className="p-4 sm:p-6 border-t border-border bg-card flex flex-col-reverse sm:flex-row justify-end gap-3 shrink-0">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-muted-foreground bg-muted hover:bg-muted/80 transition-colors cursor-pointer">
                                 Cancel
                             </button>
-                            <button type="submit" form="dealer-form" disabled={isSaving} className="px-6 py-2.5 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer">
+                            <button type="submit" form="dealer-form" disabled={isSaving} className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer">
                                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Dealer
                             </button>
                         </div>
@@ -352,15 +347,15 @@ export default function DealersPage() {
             )}
 
             {/* Header & Global Actions */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-1">Dealers / Suppliers</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mb-1">Dealers / Suppliers</h1>
                     <p className="text-muted-foreground text-sm">Manage vendor relationships and track expired stock values.</p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
                     {/* DYNAMIC LIMIT BADGE */}
-                    <div className="flex items-center gap-2 bg-card border border-border px-4 py-2.5 rounded-xl shadow-sm w-full sm:w-auto justify-center">
+                    <div className="flex items-center gap-2 bg-card border border-border px-4 py-2.5 rounded-xl shadow-sm w-full sm:w-auto justify-center shrink-0">
                         <span className="text-xs text-muted-foreground">Plan:</span>
                         <span className={`text-xs font-bold px-2 py-0.5 rounded border ${shopPlan === 'PRO' ? 'bg-[#EAB308]/10 text-[#EAB308] border-[#EAB308]/30' : 'bg-primary/10 text-primary border-primary/30'}`}>{shopPlan}</span>
                         <div className="text-[11px] font-mono ml-2 flex items-center gap-2">
@@ -371,7 +366,7 @@ export default function DealersPage() {
                         </div>
                     </div>
 
-                    <div className="relative w-full sm:w-72">
+                    <div className="relative w-full sm:w-64 md:w-72">
                         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
                             type="text"
@@ -387,22 +382,22 @@ export default function DealersPage() {
             {/* Data Grid / Table */}
             <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[500px]">
 
-                <div className="p-6 border-b border-border bg-muted/20 flex items-center justify-between shrink-0">
+                <div className="p-4 sm:p-6 border-b border-border bg-muted/20 flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-1.5 bg-muted rounded-md border border-border"><Building2 className="w-4 h-4 text-foreground" /></div>
-                        <h2 className="font-bold text-foreground text-lg">Vendor Directory</h2>
+                        <h2 className="font-bold text-foreground text-base sm:text-lg">Vendor Directory</h2>
                     </div>
                     <button
                         onClick={() => openModal()}
-                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${isDealersFull ? 'bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive hover:text-primary-foreground' : 'bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground'}`}
+                        className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${isDealersFull ? 'bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive hover:text-primary-foreground' : 'bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground'}`}
                         title={isDealersFull ? "Dealer Limit Reached" : "Add New Dealer"}
                     >
                         {isDealersFull ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />} Add Dealer
                     </button>
                 </div>
 
-                <div className="overflow-x-auto flex-1">
-                    <table className="w-full text-left border-collapse whitespace-nowrap">
+                <div className="overflow-x-auto flex-1 custom-scrollbar">
+                    <table className="w-full text-left border-collapse whitespace-nowrap min-w-[800px]">
                         <thead>
                             <tr className="text-xs tracking-wider text-muted-foreground font-mono border-b border-border bg-muted/20">
                                 <th className="px-6 py-5 font-bold uppercase">Dealer</th>
@@ -454,11 +449,11 @@ export default function DealersPage() {
                                             )}
                                         </td>
                                         <td className="px-6 py-5 text-right">
-                                            <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => openModal(dealer)} className="text-muted-foreground hover:text-foreground transition-all cursor-pointer" title="Edit Profile">
+                                            <div className="flex justify-end gap-4 sm:gap-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => openModal(dealer)} className="text-muted-foreground hover:text-foreground transition-all cursor-pointer p-2 sm:p-1" title="Edit Profile">
                                                     <Edit className="w-4 h-4" />
                                                 </button>
-                                                <button onClick={() => handleDelete(dealer.id, dealer.name)} className="text-destructive/70 hover:text-destructive transition-all cursor-pointer" title="Remove Dealer">
+                                                <button onClick={() => handleDelete(dealer.id, dealer.name)} className="text-destructive/70 hover:text-destructive transition-all cursor-pointer p-2 sm:p-1" title="Remove Dealer">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>

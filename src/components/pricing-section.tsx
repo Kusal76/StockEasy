@@ -136,58 +136,58 @@ export function PricingSection({ shopId }: { shopId?: string }) {
   };
 
   return (
-    <section id="pricing" className="relative py-24 md:py-32 w-full overflow-hidden bg-background transition-colors duration-300">
+    <section id="pricing" className="relative py-16 sm:py-24 md:py-32 w-full overflow-hidden bg-background transition-colors duration-300">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
-      <div className="relative max-w-[1280px] mx-auto px-6 md:px-16">
+      <div className="relative max-w-[1280px] mx-auto px-4 sm:px-6 md:px-16">
 
         {/* Section Header */}
-        <div className="text-center mb-20 animate-in slide-in-from-bottom-8 duration-700">
-          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6 tracking-tight">
+        <div className="text-center mb-12 sm:mb-20 animate-in slide-in-from-bottom-8 duration-700">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-foreground mb-3 sm:mb-6 tracking-tight px-2">
             Transparent Pricing
           </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto text-lg leading-relaxed font-medium">
+          <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-lg leading-relaxed font-medium px-4">
             Investment models engineered for pharmacies of all scales.
           </p>
         </div>
 
         {/* Pricing Grid */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto items-center">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto items-center">
           {plans.map((plan, index) => (
             <div
               key={plan.name}
-              className={`relative rounded-2xl p-8 flex flex-col bg-card transition-all duration-300 animate-in fade-in zoom-in-95 fill-mode-both ${plan.highlighted
-                  ? 'border-2 border-primary shadow-xl md:-translate-y-4 z-10'
-                  : 'border border-border shadow-sm hover:shadow-md'
+              className={`relative rounded-2xl p-6 sm:p-8 flex flex-col bg-card transition-all duration-300 animate-in fade-in zoom-in-95 fill-mode-both ${plan.highlighted
+                ? 'border-2 border-primary shadow-xl md:-translate-y-4 z-10'
+                : 'border border-border shadow-sm hover:shadow-md'
                 }`}
               style={{ animationDelay: `${index * 150}ms` }}
             >
               {/* Popular Badge */}
               {plan.highlighted && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="px-4 py-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full uppercase tracking-widest shadow-sm">
+                <div className="absolute -top-3 sm:-top-4 left-1/2 -translate-x-1/2">
+                  <span className="px-3 sm:px-4 py-1 bg-primary text-primary-foreground text-[9px] sm:text-[10px] font-bold rounded-full uppercase tracking-widest shadow-sm whitespace-nowrap">
                     Most Popular
                   </span>
                 </div>
               )}
 
               {/* Plan Name */}
-              <p className={`text-sm font-bold tracking-widest uppercase mb-4 ${plan.highlighted ? 'text-primary' : 'text-muted-foreground'}`}>
+              <p className={`text-xs sm:text-sm font-bold tracking-widest uppercase mb-3 sm:mb-4 ${plan.highlighted ? 'text-primary' : 'text-muted-foreground'}`}>
                 {plan.name}
               </p>
 
               {/* Price */}
-              <div className="mb-8">
-                <span className="text-5xl font-extrabold text-foreground">{plan.price}</span>
-                {plan.period && <span className="text-muted-foreground font-medium ml-1">{plan.period}</span>}
+              <div className="mb-6 sm:mb-8 flex items-baseline">
+                <span className="text-4xl sm:text-5xl font-extrabold text-foreground">{plan.price}</span>
+                {plan.period && <span className="text-sm sm:text-base text-muted-foreground font-medium ml-1.5">{plan.period}</span>}
               </div>
 
               {/* Features */}
-              <ul className="space-y-5 mb-10 flex-1">
+              <ul className="space-y-4 sm:space-y-5 mb-8 sm:mb-10 flex-1">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-3">
-                    <Check className={`w-5 h-5 shrink-0 ${plan.highlighted ? 'text-primary' : 'text-primary/70'}`} />
-                    <span className="text-sm text-muted-foreground font-medium">{feature}</span>
+                    <Check className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5 ${plan.highlighted ? 'text-primary' : 'text-primary/70'}`} />
+                    <span className="text-xs sm:text-sm text-muted-foreground font-medium">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -196,14 +196,14 @@ export function PricingSection({ shopId }: { shopId?: string }) {
               <button
                 onClick={() => handleCheckout(plan)}
                 disabled={loadingPlan === plan.name}
-                className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${plan.highlighted
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-background border border-border text-foreground hover:bg-muted'
+                className={`w-full py-3.5 sm:py-4 rounded-xl text-sm sm:text-base font-bold transition-all flex items-center justify-center gap-2 shadow-sm ${plan.highlighted
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'bg-background border border-border text-foreground hover:bg-muted'
                   } disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
               >
                 {loadingPlan === plan.name ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" /> Processing...
+                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> Processing...
                   </>
                 ) : (
                   plan.cta

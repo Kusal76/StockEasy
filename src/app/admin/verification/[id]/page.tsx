@@ -155,10 +155,10 @@ export default function ApplicationReviewPage({ params }: { params: Promise<{ id
 
     if (!shopData) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                <h1 className="text-2xl font-bold text-foreground mb-2">Application Not Found</h1>
-                <p className="mb-6">The shop application ID #{id} does not exist or has been deleted.</p>
-                <Link href="/admin/verification" className="text-primary hover:underline">Return to Queue</Link>
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground px-4 text-center">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-2">Application Not Found</h1>
+                <p className="mb-6 text-sm sm:text-base">The shop application ID #{id} does not exist or has been deleted.</p>
+                <Link href="/admin/verification" className="text-primary hover:underline font-medium">Return to Queue</Link>
             </div>
         );
     }
@@ -174,36 +174,36 @@ export default function ApplicationReviewPage({ params }: { params: Promise<{ id
     return (
         <div className="max-w-6xl animate-in fade-in duration-500 space-y-6 pb-20">
 
-            {/* Top Navigation & Header */}
-            <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
+            {/* Top Navigation & Header - FIX: Stack on mobile */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
                     <Link
                         href="/admin/shops"
-                        className="w-10 h-10 bg-card border border-border rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary transition-colors shadow-sm"
+                        className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 bg-card border border-border rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary transition-colors shadow-sm"
                     >
-                        <ArrowLeft className="w-5 h-5" />
+                        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Link>
-                    <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                        Review Application - {shopData.name || "Unnamed Shop"}
+                    <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight truncate leading-tight">
+                        Review <span className="hidden sm:inline">Application</span> - {shopData.name || "Unnamed"}
                     </h1>
                 </div>
-                <div className="bg-card border border-border px-4 py-2 rounded-lg text-sm font-mono text-muted-foreground shadow-sm">
+                <div className="bg-card border border-border px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-mono text-muted-foreground shadow-sm shrink-0">
                     ID: {shopData.id.split('-')[0]}
                 </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
 
                 {/* Left Column: Submitted Information */}
                 <div className="md:col-span-2 space-y-6">
                     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm transition-colors">
-                        <div className="px-6 py-4 border-b border-border bg-muted/30">
-                            <h2 className="font-semibold text-foreground">Submitted Information</h2>
+                        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-border bg-muted/30">
+                            <h2 className="font-semibold text-foreground text-sm sm:text-base">Submitted Information</h2>
                         </div>
 
                         <div className="divide-y divide-border/50">
                             {[
-                                { label: "Owner", value: ownerName }, // Pulled from Users table
+                                { label: "Owner", value: ownerName },
                                 { label: "Email", value: shopData.email_address || "N/A", highlight: true },
                                 { label: "Contact", value: shopData.contact_number || "N/A" },
                                 { label: "Shop Name", value: shopData.name || "N/A", highlight: true },
@@ -215,9 +215,10 @@ export default function ApplicationReviewPage({ params }: { params: Promise<{ id
                                 { label: "Address", value: shopData.address || "N/A", highlight: true },
                                 { label: "Submitted", value: formatDate(shopData.created_at) },
                             ].map((row, idx) => (
-                                <div key={idx} className={`flex items-center px-6 py-3.5 ${row.highlight ? 'bg-muted/20' : ''}`}>
-                                    <div className="w-1/3 text-sm text-muted-foreground">{row.label}</div>
-                                    <div className="w-2/3 text-sm font-medium text-foreground">{row.value}</div>
+                                // FIX: flex-col on mobile, flex-row on desktop so long values don't break the layout
+                                <div key={idx} className={`flex flex-col sm:flex-row sm:items-center px-4 sm:px-6 py-3 sm:py-3.5 gap-1 sm:gap-0 ${row.highlight ? 'bg-muted/20' : ''}`}>
+                                    <div className="w-full sm:w-1/3 text-xs sm:text-sm text-muted-foreground">{row.label}</div>
+                                    <div className="w-full sm:w-2/3 text-sm font-medium text-foreground break-words">{row.value}</div>
                                 </div>
                             ))}
                         </div>
@@ -229,27 +230,28 @@ export default function ApplicationReviewPage({ params }: { params: Promise<{ id
 
                     {/* Documents Section */}
                     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm transition-colors">
-                        <div className="px-6 py-4 border-b border-border bg-muted/30">
-                            <h2 className="font-semibold text-foreground">Uploaded Documents</h2>
+                        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-border bg-muted/30">
+                            <h2 className="font-semibold text-foreground text-sm sm:text-base">Uploaded Documents</h2>
                         </div>
-                        <div className="p-6 space-y-4">
+                        <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
                             {complianceDocs.map((doc, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => handleViewDocument(doc.url)}
                                     disabled={!doc.url}
-                                    className="w-full flex items-center gap-4 p-3 border border-border rounded-lg hover:border-primary/50 hover:bg-muted transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border disabled:hover:bg-transparent"
+                                    className="w-full flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 border border-border rounded-lg hover:border-primary/50 hover:bg-muted transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border disabled:hover:bg-transparent"
                                 >
-                                    <div className={`w-10 h-10 rounded flex items-center justify-center transition-transform ${doc.url ? 'bg-primary/10 text-primary group-hover:scale-110' : 'bg-muted text-muted-foreground'}`}>
-                                        <doc.icon className="w-5 h-5" />
+                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded flex items-center justify-center transition-transform ${doc.url ? 'bg-primary/10 text-primary group-hover:scale-110' : 'bg-muted text-muted-foreground'}`}>
+                                        <doc.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium text-foreground">{doc.name}</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                    {/* FIX: min-w-0 ensures truncation works */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-foreground truncate">{doc.name}</p>
+                                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">
                                             {doc.url ? "Click to view document" : "Not Provided"}
                                         </p>
                                     </div>
-                                    {doc.url && <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />}
+                                    {doc.url && <ExternalLink className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />}
                                 </button>
                             ))}
                         </div>
@@ -258,25 +260,25 @@ export default function ApplicationReviewPage({ params }: { params: Promise<{ id
                     {/* Decision Section */}
                     <div className={`bg-card border ${shopData.status === 'PENDING_DELETION' ? 'border-destructive/50' : 'border-border'} rounded-xl overflow-hidden shadow-sm relative transition-colors`}>
                         <div className={`absolute top-0 left-0 w-full h-1 ${shopData.status === 'PENDING_DELETION' ? 'bg-destructive' : 'bg-warning'}`} />
-                        <div className="px-6 py-4 border-b border-border bg-muted/30">
-                            <h2 className="font-semibold text-foreground">Decision Panel</h2>
+                        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-border bg-muted/30">
+                            <h2 className="font-semibold text-foreground text-sm sm:text-base">Decision Panel</h2>
                         </div>
-                        <div className="p-6 space-y-4">
+                        <div className="p-4 sm:p-6 space-y-4">
 
                             {shopData.status === 'PENDING_DELETION' ? (
                                 <>
-                                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl mb-4">
-                                        <p className="text-sm text-destructive font-bold mb-1">Account Frozen</p>
-                                        <p className="text-xs text-destructive/80 leading-relaxed">
+                                    <div className="p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-xl mb-4">
+                                        <p className="text-xs sm:text-sm text-destructive font-bold mb-1">Account Frozen</p>
+                                        <p className="text-[10px] sm:text-xs text-destructive/80 leading-relaxed">
                                             This pharmacy is scheduled to be permanently deleted on {formatDate(shopData.scheduled_deletion_date)}.
                                         </p>
                                     </div>
                                     <button
                                         onClick={handleRecovery}
                                         disabled={processingAction !== null}
-                                        className="w-full py-3 bg-emerald-500 text-white rounded-lg font-bold hover:bg-emerald-600 transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)] flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full py-2.5 sm:py-3 bg-emerald-500 text-white rounded-lg font-bold text-sm sm:text-base hover:bg-emerald-600 transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)] flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {processingAction === "RECOVER" ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
+                                        {processingAction === "RECOVER" ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />}
                                         Recover Account
                                     </button>
                                 </>
@@ -287,30 +289,30 @@ export default function ApplicationReviewPage({ params }: { params: Promise<{ id
                                         rows={3}
                                         value={adminNote}
                                         onChange={(e) => setAdminNote(e.target.value)}
-                                        className="w-full bg-background border border-border rounded-lg p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none placeholder:text-muted-foreground/50 transition-colors"
+                                        className="w-full bg-background border border-border rounded-lg p-3 text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none placeholder:text-muted-foreground/50 transition-colors"
                                     />
 
                                     <button
                                         onClick={() => handleDecision("ACTIVE")}
                                         disabled={processingAction !== null || shopData.status === "ACTIVE"}
-                                        className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90 transition-all shadow-sm flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                        className="w-full py-2.5 sm:py-3 bg-primary text-primary-foreground rounded-lg font-bold text-sm sm:text-base hover:bg-primary/90 transition-all shadow-sm flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
-                                        {processingAction === "ACTIVE" ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+                                        {processingAction === "ACTIVE" ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />}
                                         Approve Shop
                                     </button>
 
                                     <button
                                         onClick={() => handleDecision("REJECTED")}
                                         disabled={processingAction !== null || shopData.status === "REJECTED"}
-                                        className="w-full py-3 border border-border text-muted-foreground rounded-lg font-medium hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                        className="w-full py-2.5 sm:py-3 border border-border text-muted-foreground rounded-lg font-medium text-sm sm:text-base hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
-                                        {processingAction === "REJECTED" ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
+                                        {processingAction === "REJECTED" ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />}
                                         Reject Application
                                     </button>
                                 </>
                             )}
 
-                            <div className="pt-4 border-t border-border flex items-center justify-between text-xs font-mono uppercase tracking-wider">
+                            <div className="pt-3 sm:pt-4 border-t border-border flex items-center justify-between text-[10px] sm:text-xs font-mono uppercase tracking-wider">
                                 <span className="text-muted-foreground">Current Status:</span>
                                 <span className={`font-bold ${shopData.status === 'PENDING' ? 'text-warning' :
                                     shopData.status === 'ACTIVE' ? 'text-emerald-500' :

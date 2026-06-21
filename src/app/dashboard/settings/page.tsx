@@ -312,8 +312,6 @@ export default function SettingsPage() {
         if (!window.confirm(`Revoke completely all system permissions for ${name}? This will log them out instantly.`)) return;
 
         try {
-            // Call our new secure backend API to wipe the Auth credentials
-            // (Assuming 'id' is the UUID that matches both the Auth User and Staff Profile)
             const res = await fetch('/api/staff/remove', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -326,7 +324,6 @@ export default function SettingsPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to remove staff");
 
-            // Remove from the frontend UI list instantly
             setStaff(prev => prev.filter(s => s.id !== id));
 
         } catch (error: any) {
@@ -462,7 +459,6 @@ export default function SettingsPage() {
         }
     };
 
-    // --- NEW: ACCOUNT DELETION HANDLER ---
     const handleDeleteAccount = async () => {
         if (!shopId || !userEmail || !deletePassword) return;
 
@@ -499,7 +495,7 @@ export default function SettingsPage() {
         <button
             type="button"
             onClick={() => setActiveTab(id)}
-            className={`pb-3 px-1 text-sm font-bold transition-all border-b-2 ${activeTab === id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            className={`pb-3 px-2 sm:px-4 text-sm font-bold transition-all border-b-2 whitespace-nowrap ${activeTab === id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
         >
             {label}
@@ -517,18 +513,18 @@ export default function SettingsPage() {
 
     if (userRole === "STAFF") {
         return (
-            <div className="max-w-2xl mx-auto mt-20 animate-in fade-in duration-500">
-                <div className="bg-card border border-destructive/30 rounded-2xl shadow-xl p-10 flex flex-col items-center text-center relative overflow-hidden">
+            <div className="max-w-2xl mx-auto mt-10 sm:mt-20 animate-in fade-in duration-500 p-4">
+                <div className="bg-card border border-destructive/30 rounded-2xl shadow-xl p-6 sm:p-10 flex flex-col items-center text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-destructive to-transparent opacity-50"></div>
-                    <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mb-6 border border-destructive/20">
-                        <Ban className="w-10 h-10 text-destructive" />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-destructive/10 rounded-full flex items-center justify-center mb-6 border border-destructive/20">
+                        <Ban className="w-8 h-8 sm:w-10 sm:h-10 text-destructive" />
                     </div>
-                    <h1 className="text-3xl font-bold text-foreground mb-3">Access Restricted</h1>
-                    <p className="text-muted-foreground mb-6 max-w-md leading-relaxed">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">Access Restricted</h1>
+                    <p className="text-muted-foreground mb-6 max-w-md leading-relaxed text-sm sm:text-base">
                         Your account is provisioned with <strong>Staff</strong> privileges. Administrative configurations, shop profile edits, and subscription details are strictly restricted to the Shop Owner.
                     </p>
-                    <div className="px-6 py-3 bg-secondary border border-border rounded-xl text-sm font-mono text-muted-foreground">
-                        Logged in as: <span className="text-foreground">{userEmail}</span>
+                    <div className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-secondary border border-border rounded-xl text-xs sm:text-sm font-mono text-muted-foreground truncate">
+                        Logged in as: <span className="text-foreground font-bold">{userEmail}</span>
                     </div>
                 </div>
             </div>
@@ -536,48 +532,49 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto animate-in fade-in duration-500 space-y-8 relative pb-20">
+        <div className="max-w-5xl mx-auto animate-in fade-in duration-500 space-y-6 sm:space-y-8 relative pb-20">
 
+            {/* SIMULATOR MODAL */}
             {simulatorOpen && simOptions && (
                 <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-card border w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col border-emerald-500/30">
 
-                        <div className="bg-card p-5 border-b border-border flex items-center justify-between">
+                        <div className="bg-card p-4 sm:p-5 border-b border-border flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-xs font-mono tracking-wider uppercase text-emerald-500 font-medium">
+                                <span className="text-[10px] sm:text-xs font-mono tracking-wider uppercase text-emerald-500 font-medium">
                                     Razorpay Sandbox Intercept
                                 </span>
                             </div>
-                            <button onClick={() => setSimulatorOpen(false)} className="text-muted-foreground hover:text-foreground text-sm">Cancel</button>
+                            <button onClick={() => setSimulatorOpen(false)} className="text-muted-foreground hover:text-foreground text-sm cursor-pointer p-1">Cancel</button>
                         </div>
 
-                        <div className="p-6 space-y-6 flex-1">
+                        <div className="p-4 sm:p-6 space-y-6 flex-1">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h4 className="font-semibold text-foreground text-lg">{simOptions.name}</h4>
+                                    <h4 className="font-semibold text-foreground text-base sm:text-lg">{simOptions.name}</h4>
                                     <p className="text-xs text-muted-foreground mt-0.5">{simOptions.description}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-2xl font-bold text-foreground">₹{simOptions.amount / 100}</p>
+                                    <p className="text-xl sm:text-2xl font-bold text-foreground">₹{simOptions.amount / 100}</p>
                                     <p className="text-[10px] text-muted-foreground font-mono">Test Transaction</p>
                                 </div>
                             </div>
 
                             <div className="bg-secondary rounded-lg p-4 border border-border space-y-3">
-                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Simulated Checkout Path</p>
-                                <div className="flex items-center gap-3 text-sm text-foreground">
-                                    <CreditCard className="w-4 h-4 text-emerald-500" />
+                                <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">Simulated Checkout Path</p>
+                                <div className="flex items-center gap-3 text-xs sm:text-sm text-foreground">
+                                    <CreditCard className="w-4 h-4 text-emerald-500 shrink-0" />
                                     <span>Cards, UPI, Netbanking Interfaces Active</span>
                                 </div>
-                                <div className="flex items-center gap-3 text-sm text-foreground">
-                                    <Smartphone className="w-4 h-4 text-emerald-500" />
+                                <div className="flex items-center gap-3 text-xs sm:text-sm text-foreground">
+                                    <Smartphone className="w-4 h-4 text-emerald-500 shrink-0" />
                                     <span>Pre-authenticated Sandbox Authorization Profile</span>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
-                                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                            <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground justify-center">
+                                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                                 <span>Secured End-to-End Pipeline</span>
                             </div>
                         </div>
@@ -586,10 +583,10 @@ export default function SettingsPage() {
                             <button
                                 onClick={executeSimulatedPayment}
                                 disabled={isProcessingSim}
-                                className="w-full bg-emerald-500 text-white font-bold py-3 rounded-xl hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                                className="w-full bg-emerald-500 text-white font-bold py-3 rounded-xl hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer text-sm sm:text-base"
                             >
                                 {isProcessingSim ? (
-                                    <><Loader2 className="w-4 h-4 animate-spin text-white" /> Authorizing Pipeline Token...</>
+                                    <><Loader2 className="w-4 h-4 animate-spin text-white" /> Authorizing...</>
                                 ) : (
                                     `Authorize Payment of ₹${simOptions.amount / 100}`
                                 )}
@@ -599,17 +596,18 @@ export default function SettingsPage() {
                 </div>
             )}
 
+            {/* STAFF MODAL */}
             {isStaffModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-                    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-                        <div className="flex justify-between items-center p-6 border-b border-border bg-muted/30">
-                            <h3 className="font-bold text-foreground text-lg">{editingStaffId ? 'Modify Staff Credentials' : 'Provision Staff Access'}</h3>
-                            <button type="button" onClick={() => setIsStaffModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-muted rounded-lg"><X className="w-5 h-5" /></button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-border bg-muted/30 shrink-0">
+                            <h3 className="font-bold text-foreground text-base sm:text-lg">{editingStaffId ? 'Modify Staff Credentials' : 'Provision Staff Access'}</h3>
+                            <button type="button" onClick={() => setIsStaffModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-muted rounded-lg cursor-pointer"><X className="w-5 h-5" /></button>
                         </div>
-                        <form onSubmit={handleSaveStaff} className="p-6 space-y-4">
+                        <form onSubmit={handleSaveStaff} className="p-4 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar">
                             <div className="space-y-1.5"><label className="text-xs font-mono text-muted-foreground">Full Name *</label><input type="text" required value={staffFormData.name} onChange={e => setStaffFormData({ ...staffFormData, name: e.target.value })} className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary" /></div>
                             <div className="space-y-1.5"><label className="text-xs font-mono text-muted-foreground">Business Email *</label><input type="email" required disabled={!!editingStaffId} value={staffFormData.email} onChange={e => setStaffFormData({ ...staffFormData, email: e.target.value })} className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary disabled:opacity-50" /></div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-mono text-muted-foreground">System Role</label>
                                     <select value={staffFormData.role} onChange={e => setStaffFormData({ ...staffFormData, role: e.target.value })} className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary appearance-none disabled:opacity-50" disabled={!!editingStaffId}>
@@ -618,310 +616,35 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="space-y-1.5"><label className="text-xs font-mono text-muted-foreground">Access Status</label><select value={staffFormData.status} onChange={e => setStaffFormData({ ...staffFormData, status: e.target.value })} className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary appearance-none"><option value="ACTIVE">ACTIVE</option><option value="SUSPENDED">SUSPENDED</option></select></div>
                             </div>
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button type="button" onClick={() => setIsStaffModalOpen(false)} className="px-5 py-2 rounded-lg font-bold text-muted-foreground bg-muted hover:bg-muted/80 transition-colors cursor-pointer">Cancel</button>
-                                <button type="submit" disabled={isStaffSaving} className="px-5 py-2 rounded-lg font-bold text-primary-foreground bg-primary hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer">{isStaffSaving && <Loader2 className="w-4 h-4 animate-spin" />} Sync Profile</button>
+                            <div className="pt-4 flex flex-col-reverse sm:flex-row justify-end gap-3">
+                                <button type="button" onClick={() => setIsStaffModalOpen(false)} className="w-full sm:w-auto px-5 py-2.5 sm:py-2 rounded-lg font-bold text-muted-foreground bg-muted hover:bg-muted/80 transition-colors cursor-pointer">Cancel</button>
+                                <button type="submit" disabled={isStaffSaving} className="w-full sm:w-auto px-5 py-2.5 sm:py-2 rounded-lg font-bold text-primary-foreground bg-primary hover:bg-primary/90 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">{isStaffSaving && <Loader2 className="w-4 h-4 animate-spin" />} Sync Profile</button>
                             </div>
                         </form>
                     </div>
-                </div>
-            )}
-
-            <div>
-                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-1">Settings & Profile</h1>
-                <p className="text-muted-foreground text-sm">Manage your pharmacy identity, staff, password, and subscription.</p>
-            </div>
-
-            <div className="flex items-center gap-8 border-b border-border">
-                <TabButton id="profile" label="Shop Profile" />
-                <TabButton id="staff" label="Staff" />
-                <TabButton id="password" label="Password" />
-                <TabButton id="subscription" label="Subscription" />
-            </div>
-
-            {activeTab === "profile" && (
-                <div className="space-y-6 animate-in fade-in">
-                    <div className="bg-card border border-border rounded-2xl shadow-sm p-8 space-y-6 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 bg-primary/5 rounded-bl-3xl border-b border-l border-primary/20">
-                            <div className="flex items-center gap-2 text-primary font-bold text-xs"><ShieldCheck className="w-4 h-4" /> VERIFIED BY ADMIN</div>
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-foreground flex items-center gap-2"><Lock className="w-5 h-5 text-muted-foreground" /> Legal & Compliance Details</h2>
-                            <p className="text-xs text-muted-foreground mt-1">These details were verified during registration. Contact Support to request an amendment.</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 opacity-80">
-                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Owner Name</label><div className="px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed truncate">{ownerName || "N/A"}</div></div>
-                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Business Type</label><div className="px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed">{profileData.business_type || "N/A"}</div></div>
-                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">PAN Number</label><div className="px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed uppercase">{profileData.pan_number || "N/A"}</div></div>
-                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">GST Number</label><div className="px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed uppercase">{profileData.gst_number || "N/A"}</div></div>
-                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Drug License No.</label><div className="px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed uppercase">{profileData.drug_license_no || "N/A"}</div></div>
-                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">License Expiry Date</label><div className="px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed">{profileData.license_expiry || "N/A"}</div></div>
-                        </div>
-                    </div>
-                    <div className="bg-card border border-border rounded-2xl shadow-sm p-8 space-y-8">
-                        <input type="file" ref={fileInputRef} className="hidden" accept="image/jpeg, image/png" onChange={handleLogoUpload} />
-                        <div className="flex items-center gap-6 pb-6 border-b border-border">
-                            <div className="relative">
-                                <div className="w-20 h-20 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden">
-                                    {isUploading ? <Loader2 className="w-6 h-6 animate-spin text-primary" /> : profileData.logo_url ? <img src={profileData.logo_url} alt="Logo" className="w-full h-full object-cover" /> : <User className="w-8 h-8 text-muted-foreground" />}
-                                </div>
-                                <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full border-2 border-card cursor-pointer"><Camera className="w-3 h-3" /></button>
-                            </div>
-                            <div>
-                                <h3 className="text-foreground font-bold text-base">Shop Logo</h3>
-                                <div className="flex gap-3 mt-2">
-                                    <button type="button" onClick={() => fileInputRef.current?.click()} className="px-3 py-1.5 bg-muted border border-border text-foreground text-xs font-bold rounded-lg hover:bg-muted/80 cursor-pointer">Upload New</button>
-                                    {profileData.logo_url && <button type="button" onClick={handleRemoveLogo} className="px-3 py-1.5 text-destructive/80 text-xs font-bold hover:text-destructive cursor-pointer">Remove</button>}
-                                </div>
-                            </div>
-                        </div>
-                        <form onSubmit={handleSaveProfile} className="space-y-6">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Shop Name *</label>
-                                <input type="text" required value={profileData.name} onChange={e => setProfileData({ ...profileData, name: e.target.value })} className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Primary Contact Number *</label>
-                                    <input type="text" inputMode="numeric" pattern="[0-9]{10}" required value={profileData.contact_number} onChange={e => handlePhoneChange(e.target.value, "contact_number")} className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono" placeholder="10-digit mobile number" />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Alternate Contact Number</label>
-                                    <input type="text" inputMode="numeric" pattern="[0-9]{10}" value={profileData.alternate_contact_no || ""} onChange={e => handlePhoneChange(e.target.value, "alternate_contact_no")} className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono" placeholder="Optional 10-digit number" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Business Email Address</label>
-                                    <input type="email" value={profileData.email_address} onChange={e => setProfileData({ ...profileData, email_address: e.target.value })} className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Full Shop Address</label>
-                                    <textarea rows={2} value={profileData.address} onChange={e => setProfileData({ ...profileData, address: e.target.value })} className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors resize-none" />
-                                </div>
-                            </div>
-                            <div className="pt-4 flex items-center justify-between border-t border-border mt-6">
-                                <div>
-                                    {successMsg && <span className="text-sm font-bold text-primary animate-in fade-in">{successMsg}</span>}
-                                    {!isDirty && !successMsg && <span className="text-sm text-muted-foreground italic">All editable changes are synced.</span>}
-                                    {isDirty && !isSaving && <span className="text-sm font-bold text-warning animate-in fade-in">You have unsaved changes!</span>}
-                                </div>
-                                <button type="submit" disabled={isSaving || !isDirty} className={`px-8 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm ${isDirty ? 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer' : 'bg-secondary text-muted-foreground border border-border cursor-not-allowed'}`}>
-                                    {isSaving && <Loader2 className="w-4 h-4 animate-spin" />} {isDirty ? "Save Changes" : "Saved"}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    {/* --- DANGER ZONE --- */}
-                    <div className="border border-destructive/50 bg-destructive/5 rounded-2xl overflow-hidden relative mt-8">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-destructive"></div>
-                        <div className="p-6">
-                            <h2 className="text-lg font-bold text-foreground mb-2 flex items-center gap-2">
-                                <AlertTriangle className="w-5 h-5 text-destructive" /> Danger Zone
-                            </h2>
-                            <p className="text-sm text-muted-foreground mb-6">
-                                Permanently deleting your account will schedule your shop, inventory, and staff data for complete incineration after a 30-day grace period.
-                            </p>
-
-                            <div className="flex items-center justify-between p-4 bg-destructive/10 border border-destructive/30 rounded-xl">
-                                <div>
-                                    <h4 className="text-sm font-bold text-destructive">Delete Pharmacy Account</h4>
-                                    <p className="text-xs text-destructive/80 mt-0.5">This action cannot be undone once the grace period expires.</p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsDeleteModalOpen(true)}
-                                    className="px-5 py-2.5 bg-destructive text-white rounded-lg text-sm font-bold hover:bg-destructive/90 transition-colors flex items-center gap-2 cursor-pointer"
-                                >
-                                    <Trash2 className="w-4 h-4" /> Delete Account
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            )}
-
-            {activeTab === "staff" && (
-                <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in">
-                    <div className="p-6 border-b border-border bg-muted/30 flex items-center justify-between">
-                        <div>
-                            <h2 className="font-bold text-foreground text-lg">Staff Members</h2>
-                            <p className="text-xs text-muted-foreground mt-0.5">Provision permissions and roles for your healthcare staff.</p>
-                        </div>
-                        <button type="button" onClick={() => openStaffModal()} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl font-bold hover:bg-primary/90 transition-all cursor-pointer">
-                            <Plus className="w-4 h-4" /> Add Staff
-                        </button>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse whitespace-nowrap">
-                            <thead>
-                                <tr className="text-xs tracking-wider text-muted-foreground font-mono border-b border-border bg-muted/20">
-                                    <th className="px-6 py-4 font-bold uppercase">Name</th>
-                                    <th className="px-6 py-4 font-bold uppercase">Email</th>
-                                    <th className="px-6 py-4 font-bold uppercase">Role</th>
-                                    <th className="px-6 py-4 font-bold uppercase">Status</th>
-                                    <th className="px-6 py-4 font-bold uppercase text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {staff.length === 0 ? (
-                                    <tr><td colSpan={5} className="px-6 py-16 text-center text-muted-foreground text-sm">No secondary staff profiles registered. Add system handles above.</td></tr>
-                                ) : (
-                                    staff.map((member) => (
-                                        <tr key={member.id} className="hover:bg-muted/50 transition-colors group">
-                                            <td className="px-6 py-4.5 font-bold text-foreground text-sm">{member.name}</td>
-                                            <td className="px-6 py-4.5 text-sm font-mono text-muted-foreground">{member.email}</td>
-                                            <td className="px-6 py-4.5"><span className={`px-2.5 py-0.5 rounded text-[11px] font-mono font-bold tracking-wider ${member.role === 'OWNER' ? 'bg-primary/10 border border-primary/30 text-primary' : 'bg-muted border border-border text-muted-foreground'}`}>{member.role}</span></td>
-                                            <td className="px-6 py-4.5"><div className="flex items-center gap-1.5 text-sm"><span className={`w-2 h-2 rounded-full ${member.status === 'ACTIVE' ? 'bg-primary' : 'bg-destructive'}`} /><span className={member.status === 'ACTIVE' ? 'text-foreground' : 'text-destructive/80'}>{member.status}</span></div></td>
-                                            <td className="px-6 py-4.5 text-right"><div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity"><button type="button" onClick={() => openStaffModal(member)} className="text-muted-foreground hover:text-foreground transition-all cursor-pointer"><Edit className="w-4 h-4" /></button><button type="button" onClick={() => handleDeleteStaff(member.id, member.name)} className="text-destructive/70 hover:text-destructive transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button></div></td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {activeTab === "password" && (
-                <div className="bg-card border border-border rounded-2xl shadow-sm p-8 max-w-xl animate-in fade-in space-y-6">
-                    <div className="flex items-center gap-3 pb-4 border-b border-border">
-                        <ShieldAlert className="w-5 h-5 text-primary" />
-                        <div>
-                            <h3 className="font-bold text-foreground text-lg">Change System Password</h3>
-                            <p className="text-xs text-muted-foreground mt-0.5">Update your account password to maintain security.</p>
-                        </div>
-                    </div>
-                    <form onSubmit={handleUpdatePassword} className="space-y-5">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Current Password</label>
-                            <input type="password" required value={passwordData.oldPassword} onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">New Password</label>
-                            <input type="password" required value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Confirm New Password</label>
-                            <input type="password" required value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground" />
-                        </div>
-                        {passwordMsg.text && (
-                            <div className={`p-3 rounded-lg text-sm font-bold flex items-center gap-2 ${passwordMsg.type === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
-                                {passwordMsg.type === 'error' ? <ShieldAlert className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                                {passwordMsg.text}
-                            </div>
-                        )}
-                        <button type="submit" disabled={isUpdatingPassword || !passwordData.newPassword || !passwordData.oldPassword} className="w-full px-8 py-3 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-4 cursor-pointer">
-                            {isUpdatingPassword && <Loader2 className="w-4 h-4 animate-spin" />} Update Password
-                        </button>
-                    </form>
-                </div>
-            )}
-
-            {activeTab === "subscription" && (
-                <div className="animate-in fade-in duration-500 space-y-8">
-                    <div className="bg-card border border-border rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
-                        <div>
-                            <h3 className="text-lg font-bold text-foreground">Current Plan</h3>
-                            <div className="flex items-center gap-2 mt-1">
-                                <p className="text-muted-foreground text-sm">
-                                    You are currently subscribed to the <span className="text-foreground font-bold capitalize">{profileData.plan ? profileData.plan.toLowerCase() : 'Starter'} Plan</span>.
-                                </p>
-                                <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded border border-primary/30 uppercase">Active</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <button onClick={() => alert("Redirecting to secure billing portal to view tax invoices... (Simulated in Demo)")} className="px-4 py-2 border border-border rounded-lg text-foreground text-sm hover:bg-muted transition-colors cursor-pointer">
-                                View Invoices
-                            </button>
-
-                            {(profileData.plan || "STARTER") !== "STARTER" && (
-                                <button onClick={handleCancelSubscription} className="px-4 py-2 border border-destructive/50 text-destructive/90 rounded-lg text-sm hover:bg-destructive/10 transition-colors cursor-pointer">
-                                    Cancel Sub
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start relative">
-
-                        {/* STARTER CARD */}
-                        <div className={`bg-card border ${(profileData.plan || 'STARTER') === 'STARTER' ? 'border-primary/50 shadow-md' : 'border-border'} rounded-2xl p-8 flex flex-col`}>
-                            <div className="mb-6">
-                                <h4 className="text-muted-foreground text-lg mb-2">Starter</h4>
-                                <div className="text-3xl font-bold text-foreground">Free</div>
-                            </div>
-                            <ul className="space-y-4 mb-8 text-sm text-muted-foreground flex-1">
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Single User (No Staff)</li>
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Max 5 Catalog Medicines</li>
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Max 2 Dealers/Suppliers</li>
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Basic Billing & Inventory</li>
-                            </ul>
-                            <button onClick={() => handlePlanUpdate('STARTER')} disabled={(profileData.plan || 'STARTER') === 'STARTER'} className={`w-full py-2.5 rounded-xl text-sm transition-all ${(profileData.plan || 'STARTER') === 'STARTER' ? 'bg-primary/10 text-primary border border-primary/30 cursor-not-allowed' : 'border border-border text-foreground hover:bg-muted cursor-pointer'}`}>
-                                {(profileData.plan || 'STARTER') === 'STARTER' ? 'Current Plan' : 'Start Free Trial'}
-                            </button>
-                        </div>
-
-                        {/* GROWTH CARD */}
-                        <div className={`bg-card border-2 ${(profileData.plan || 'STARTER') === 'GROWTH' ? 'border-primary shadow-md' : 'border-primary/60'} rounded-2xl p-8 flex flex-col relative`}>
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold uppercase px-3 py-1 rounded-full">Most Popular</div>
-                            <div className="mb-6">
-                                <h4 className="text-primary text-lg mb-2">Growth</h4>
-                                <div className="text-3xl font-bold text-foreground">Rs 599 <span className="text-sm font-normal text-muted-foreground">/mo</span></div>
-                            </div>
-                            <ul className="space-y-4 mb-8 text-sm text-muted-foreground flex-1">
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Up to 5 Staff Accounts</li>
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Max 50 Catalog Medicines</li>
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Max 10 Dealers/Suppliers</li>
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Advanced FEFO Alerts</li>
-                            </ul>
-                            <button onClick={() => handlePlanUpdate('GROWTH')} disabled={profileData.plan === 'GROWTH'} className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all ${profileData.plan === 'GROWTH' ? 'bg-primary/20 text-primary border border-primary/30 cursor-not-allowed' : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm cursor-pointer'}`}>
-                                {profileData.plan === 'GROWTH' ? 'Current Plan' : 'Select Growth'}
-                            </button>
-                        </div>
-
-                        {/* PRO CARD */}
-                        <div className={`bg-card border ${profileData.plan === 'PRO' ? 'border-primary/50 shadow-md' : 'border-border'} rounded-2xl p-8 flex flex-col`}>
-                            <div className="mb-6">
-                                <h4 className="text-muted-foreground text-lg mb-2">Pro</h4>
-                                <div className="text-3xl font-bold text-foreground">Rs 1499 <span className="text-sm font-normal text-muted-foreground">/mo</span></div>
-                            </div>
-                            <ul className="space-y-4 mb-8 text-sm text-muted-foreground flex-1">
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Unlimited Staff, SKUs & Dealers</li>
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> StockEasy AI Assistant Access</li>
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Full Enterprise Analytics</li>
-                                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> 24/7 Priority Support</li>
-                            </ul>
-                            <button onClick={() => handlePlanUpdate('PRO')} disabled={profileData.plan === 'PRO'} className={`w-full py-2.5 rounded-xl text-sm transition-all ${profileData.plan === 'PRO' ? 'bg-primary/10 text-primary border border-primary/30 cursor-not-allowed' : 'border border-border text-foreground hover:bg-muted cursor-pointer'}`}>
-                                {profileData.plan === 'PRO' ? 'Current Plan' : 'Select Pro'}
-                            </button>
-                        </div>
-                    </div>
-                    <p className="text-center text-xs text-muted-foreground pt-4">All plans are billed securely. Prices exclude applicable taxes.</p>
                 </div>
             )}
 
             {/* Verification Modal for Account Deletion */}
             {isDeleteModalOpen && (
                 <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-                    <div className="bg-card border border-destructive/50 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95">
-                        <div className="p-6 border-b border-border flex items-center justify-between">
+                    <div className="bg-card border border-destructive/50 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh]">
+                        <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center shrink-0">
-                                    <AlertTriangle className="w-5 h-5 text-destructive" />
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-destructive/10 rounded-full flex items-center justify-center shrink-0">
+                                    <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-bold text-foreground">Confirm Deletion</h2>
-                                    <p className="text-xs text-muted-foreground">Enter your password to verify</p>
+                                    <h2 className="text-base sm:text-lg font-bold text-foreground">Confirm Deletion</h2>
+                                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Enter your password to verify</p>
                                 </div>
                             </div>
-                            <button onClick={() => setIsDeleteModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+                            <button onClick={() => setIsDeleteModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-1">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-4">
+                        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar">
                             {deleteErrorMsg && (
                                 <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive font-medium">
                                     {deleteErrorMsg}
@@ -943,24 +666,316 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
-                        <div className="p-4 bg-muted/50 border-t border-border flex justify-end gap-3">
+                        <div className="p-4 bg-muted/50 border-t border-border flex flex-col-reverse sm:flex-row justify-end gap-3 shrink-0">
                             <button
                                 onClick={() => setIsDeleteModalOpen(false)}
                                 disabled={isDeletingAccount}
-                                className="px-4 py-2 rounded-lg text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
+                                className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleDeleteAccount}
                                 disabled={!deletePassword || isDeletingAccount}
-                                className="px-6 py-2 bg-destructive text-white rounded-lg text-sm font-bold hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                                className="w-full sm:w-auto px-6 py-2.5 bg-destructive text-white rounded-lg text-sm font-bold hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 {isDeletingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                 {isDeletingAccount ? "Verifying..." : "Confirm & Delete"}
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* PAGE HEADER */}
+            <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mb-1 sm:mb-2">Settings & Profile</h1>
+                <p className="text-muted-foreground text-sm">Manage your pharmacy identity, staff, password, and subscription.</p>
+            </div>
+
+            {/* FIX: Swipeable horizontal tabs on mobile */}
+            <div className="flex items-center gap-4 sm:gap-8 border-b border-border overflow-x-auto custom-scrollbar pb-1">
+                <TabButton id="profile" label="Shop Profile" />
+                <TabButton id="staff" label="Staff" />
+                <TabButton id="password" label="Password" />
+                <TabButton id="subscription" label="Subscription" />
+            </div>
+
+            {/* TAB: PROFILE */}
+            {activeTab === "profile" && (
+                <div className="space-y-6 animate-in fade-in">
+                    <div className="bg-card border border-border rounded-2xl shadow-sm p-5 sm:p-8 space-y-6 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-3 sm:p-4 bg-primary/5 rounded-bl-3xl border-b border-l border-primary/20">
+                            <div className="flex items-center gap-1 sm:gap-2 text-primary font-bold text-[10px] sm:text-xs"><ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4" /> VERIFIED</div>
+                        </div>
+                        <div className="pr-20 sm:pr-0">
+                            <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2"><Lock className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground shrink-0" /> Legal & Compliance Details</h2>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 leading-relaxed">These details were verified during registration. Contact Support to request an amendment.</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 opacity-80 mt-4">
+                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Owner Name</label><div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed truncate">{ownerName || "N/A"}</div></div>
+                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Business Type</label><div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed truncate">{profileData.business_type || "N/A"}</div></div>
+                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">PAN Number</label><div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed uppercase truncate">{profileData.pan_number || "N/A"}</div></div>
+                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">GST Number</label><div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed uppercase truncate">{profileData.gst_number || "N/A"}</div></div>
+                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Drug License No.</label><div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed uppercase truncate">{profileData.drug_license_no || "N/A"}</div></div>
+                            <div className="space-y-1.5"><label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">License Expiry Date</label><div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-muted-foreground font-mono cursor-not-allowed truncate">{profileData.license_expiry || "N/A"}</div></div>
+                        </div>
+                    </div>
+
+                    <div className="bg-card border border-border rounded-2xl shadow-sm p-5 sm:p-8 space-y-6 sm:space-y-8">
+                        <input type="file" ref={fileInputRef} className="hidden" accept="image/jpeg, image/png" onChange={handleLogoUpload} />
+
+                        {/* FIX: Stack logo upload on mobile */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 pb-6 border-b border-border">
+                            <div className="relative shrink-0">
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden">
+                                    {isUploading ? <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-primary" /> : profileData.logo_url ? <img src={profileData.logo_url} alt="Logo" className="w-full h-full object-cover" /> : <User className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" />}
+                                </div>
+                                <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full border-2 border-card cursor-pointer"><Camera className="w-3 h-3" /></button>
+                            </div>
+                            <div className="w-full sm:w-auto">
+                                <h3 className="text-foreground font-bold text-base">Shop Logo</h3>
+                                <div className="flex gap-2 mt-2 w-full sm:w-auto">
+                                    <button type="button" onClick={() => fileInputRef.current?.click()} className="flex-1 sm:flex-none px-3 py-1.5 bg-muted border border-border text-foreground text-xs font-bold rounded-lg hover:bg-muted/80 cursor-pointer">Upload New</button>
+                                    {profileData.logo_url && <button type="button" onClick={handleRemoveLogo} className="flex-1 sm:flex-none px-3 py-1.5 text-destructive/80 text-xs font-bold hover:text-destructive cursor-pointer">Remove</button>}
+                                </div>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleSaveProfile} className="space-y-4 sm:space-y-6">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Shop Name *</label>
+                                <input type="text" required value={profileData.name} onChange={e => setProfileData({ ...profileData, name: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Primary Contact Number *</label>
+                                    <input type="text" inputMode="numeric" pattern="[0-9]{10}" required value={profileData.contact_number} onChange={e => handlePhoneChange(e.target.value, "contact_number")} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono" placeholder="10-digit mobile number" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Alternate Contact Number</label>
+                                    <input type="text" inputMode="numeric" pattern="[0-9]{10}" value={profileData.alternate_contact_no || ""} onChange={e => handlePhoneChange(e.target.value, "alternate_contact_no")} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono" placeholder="Optional 10-digit number" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 items-start">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Business Email Address</label>
+                                    <input type="email" value={profileData.email_address} onChange={e => setProfileData({ ...profileData, email_address: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Full Shop Address</label>
+                                    <textarea rows={3} value={profileData.address} onChange={e => setProfileData({ ...profileData, address: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors resize-none" />
+                                </div>
+                            </div>
+
+                            {/* FIX: Stack buttons on mobile */}
+                            <div className="pt-4 flex flex-col-reverse sm:flex-row items-center justify-between border-t border-border mt-6 gap-4">
+                                <div className="w-full sm:w-auto text-center sm:text-left">
+                                    {successMsg && <span className="text-sm font-bold text-primary animate-in fade-in block">{successMsg}</span>}
+                                    {!isDirty && !successMsg && <span className="text-sm text-muted-foreground italic block">All editable changes are synced.</span>}
+                                    {isDirty && !isSaving && <span className="text-sm font-bold text-warning animate-in fade-in block">You have unsaved changes!</span>}
+                                </div>
+                                <button type="submit" disabled={isSaving || !isDirty} className={`w-full sm:w-auto px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm ${isDirty ? 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer' : 'bg-secondary text-muted-foreground border border-border cursor-not-allowed'}`}>
+                                    {isSaving && <Loader2 className="w-4 h-4 animate-spin" />} {isDirty ? "Save Changes" : "Saved"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* --- DANGER ZONE --- */}
+                    <div className="border border-destructive/50 bg-destructive/5 rounded-2xl overflow-hidden relative mt-8">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-destructive"></div>
+                        <div className="p-5 sm:p-6">
+                            <h2 className="text-base sm:text-lg font-bold text-foreground mb-2 flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 text-destructive" /> Danger Zone
+                            </h2>
+                            <p className="text-xs sm:text-sm text-muted-foreground mb-6">
+                                Permanently deleting your account will schedule your shop, inventory, and staff data for complete incineration after a 30-day grace period.
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-destructive/10 border border-destructive/30 rounded-xl gap-4">
+                                <div>
+                                    <h4 className="text-sm font-bold text-destructive">Delete Pharmacy Account</h4>
+                                    <p className="text-[10px] sm:text-xs text-destructive/80 mt-0.5">This action cannot be undone once the grace period expires.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDeleteModalOpen(true)}
+                                    className="w-full sm:w-auto justify-center px-5 py-2.5 bg-destructive text-white rounded-lg text-sm font-bold hover:bg-destructive/90 transition-colors flex items-center gap-2 cursor-pointer shrink-0"
+                                >
+                                    <Trash2 className="w-4 h-4 shrink-0" /> Delete Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB: STAFF */}
+            {activeTab === "staff" && (
+                <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in">
+                    <div className="p-4 sm:p-6 border-b border-border bg-muted/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0">
+                        <div>
+                            <h2 className="font-bold text-foreground text-base sm:text-lg">Staff Members</h2>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Provision permissions and roles for your healthcare staff.</p>
+                        </div>
+                        <button type="button" onClick={() => openStaffModal()} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 sm:py-2 rounded-xl font-bold hover:bg-primary/90 transition-all cursor-pointer">
+                            <Plus className="w-4 h-4" /> Add Staff
+                        </button>
+                    </div>
+                    {/* FIX: Horizontal wrapper for staff table */}
+                    <div className="overflow-x-auto custom-scrollbar flex-1">
+                        <table className="w-full text-left border-collapse whitespace-nowrap min-w-[700px]">
+                            <thead>
+                                <tr className="text-[10px] sm:text-xs tracking-wider text-muted-foreground font-mono border-b border-border bg-muted/20">
+                                    <th className="px-4 sm:px-6 py-4 font-bold uppercase">Name</th>
+                                    <th className="px-4 sm:px-6 py-4 font-bold uppercase">Email</th>
+                                    <th className="px-4 sm:px-6 py-4 font-bold uppercase">Role</th>
+                                    <th className="px-4 sm:px-6 py-4 font-bold uppercase">Status</th>
+                                    <th className="px-4 sm:px-6 py-4 font-bold uppercase text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {staff.length === 0 ? (
+                                    <tr><td colSpan={5} className="px-6 py-16 text-center text-muted-foreground text-sm">No secondary staff profiles registered. Add system handles above.</td></tr>
+                                ) : (
+                                    staff.map((member) => (
+                                        <tr key={member.id} className="hover:bg-muted/50 transition-colors group">
+                                            <td className="px-4 sm:px-6 py-4 font-bold text-foreground text-sm">{member.name}</td>
+                                            <td className="px-4 sm:px-6 py-4 text-sm font-mono text-muted-foreground">{member.email}</td>
+                                            <td className="px-4 sm:px-6 py-4"><span className={`px-2.5 py-0.5 rounded text-[10px] sm:text-[11px] font-mono font-bold tracking-wider ${member.role === 'OWNER' ? 'bg-primary/10 border border-primary/30 text-primary' : 'bg-muted border border-border text-muted-foreground'}`}>{member.role}</span></td>
+                                            <td className="px-4 sm:px-6 py-4"><div className="flex items-center gap-1.5 text-xs sm:text-sm"><span className={`w-2 h-2 rounded-full shrink-0 ${member.status === 'ACTIVE' ? 'bg-primary' : 'bg-destructive'}`} /><span className={member.status === 'ACTIVE' ? 'text-foreground' : 'text-destructive/80'}>{member.status}</span></div></td>
+                                            <td className="px-4 sm:px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-4 sm:gap-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                                    <button type="button" onClick={() => openStaffModal(member)} className="text-muted-foreground hover:text-foreground transition-all cursor-pointer p-1"><Edit className="w-4 h-4" /></button>
+                                                    <button type="button" onClick={() => handleDeleteStaff(member.id, member.name)} className="text-destructive/70 hover:text-destructive transition-all cursor-pointer p-1"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB: PASSWORD */}
+            {activeTab === "password" && (
+                <div className="bg-card border border-border rounded-2xl shadow-sm p-5 sm:p-8 max-w-xl animate-in fade-in space-y-6">
+                    <div className="flex items-center gap-3 pb-4 border-b border-border">
+                        <ShieldAlert className="w-5 h-5 text-primary shrink-0" />
+                        <div>
+                            <h3 className="font-bold text-foreground text-base sm:text-lg">Change System Password</h3>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Update your account password to maintain security.</p>
+                        </div>
+                    </div>
+                    <form onSubmit={handleUpdatePassword} className="space-y-4 sm:space-y-5">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Current Password</label>
+                            <input type="password" required value={passwordData.oldPassword} onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">New Password</label>
+                            <input type="password" required value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Confirm New Password</label>
+                            <input type="password" required value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm" />
+                        </div>
+                        {passwordMsg.text && (
+                            <div className={`p-3 rounded-lg text-sm font-bold flex items-center gap-2 ${passwordMsg.type === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                                {passwordMsg.type === 'error' ? <ShieldAlert className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
+                                {passwordMsg.text}
+                            </div>
+                        )}
+                        <button type="submit" disabled={isUpdatingPassword || !passwordData.newPassword || !passwordData.oldPassword} className="w-full px-8 py-3 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-4 sm:mt-6 cursor-pointer text-sm sm:text-base">
+                            {isUpdatingPassword && <Loader2 className="w-4 h-4 animate-spin" />} Update Password
+                        </button>
+                    </form>
+                </div>
+            )}
+
+            {/* TAB: SUBSCRIPTION */}
+            {activeTab === "subscription" && (
+                <div className="animate-in fade-in duration-500 space-y-6 sm:space-y-8">
+                    <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
+                        <div>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground">Current Plan</h3>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <p className="text-muted-foreground text-xs sm:text-sm">
+                                    You are currently subscribed to the <span className="text-foreground font-bold capitalize">{profileData.plan ? profileData.plan.toLowerCase() : 'Starter'} Plan</span>.
+                                </p>
+                                <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded border border-primary/30 uppercase">Active</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                            <button onClick={() => alert("Redirecting to secure billing portal to view tax invoices... (Simulated in Demo)")} className="w-full sm:w-auto px-4 py-2 border border-border rounded-lg text-foreground text-sm hover:bg-muted transition-colors cursor-pointer justify-center text-center">
+                                View Invoices
+                            </button>
+
+                            {(profileData.plan || "STARTER") !== "STARTER" && (
+                                <button onClick={handleCancelSubscription} className="w-full sm:w-auto px-4 py-2 border border-destructive/50 text-destructive/90 rounded-lg text-sm hover:bg-destructive/10 transition-colors cursor-pointer justify-center text-center">
+                                    Cancel Sub
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-start relative">
+
+                        {/* STARTER CARD */}
+                        <div className={`bg-card border ${(profileData.plan || 'STARTER') === 'STARTER' ? 'border-primary/50 shadow-md' : 'border-border'} rounded-2xl p-6 sm:p-8 flex flex-col`}>
+                            <div className="mb-4 sm:mb-6">
+                                <h4 className="text-muted-foreground text-base sm:text-lg mb-1 sm:mb-2">Starter</h4>
+                                <div className="text-2xl sm:text-3xl font-bold text-foreground">Free</div>
+                            </div>
+                            <ul className="space-y-3 sm:space-y-4 mb-6 sm:mb-8 text-xs sm:text-sm text-muted-foreground flex-1">
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Single User (No Staff)</li>
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Max 5 Catalog Medicines</li>
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Max 2 Dealers/Suppliers</li>
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Basic Billing & Inventory</li>
+                            </ul>
+                            <button onClick={() => handlePlanUpdate('STARTER')} disabled={(profileData.plan || 'STARTER') === 'STARTER'} className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${(profileData.plan || 'STARTER') === 'STARTER' ? 'bg-primary/10 text-primary border border-primary/30 cursor-not-allowed' : 'border border-border text-foreground hover:bg-muted cursor-pointer'}`}>
+                                {(profileData.plan || 'STARTER') === 'STARTER' ? 'Current Plan' : 'Start Free Trial'}
+                            </button>
+                        </div>
+
+                        {/* GROWTH CARD */}
+                        <div className={`bg-card border-2 ${(profileData.plan || 'STARTER') === 'GROWTH' ? 'border-primary shadow-md' : 'border-primary/60'} rounded-2xl p-6 sm:p-8 flex flex-col relative`}>
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold uppercase px-3 py-1 rounded-full whitespace-nowrap">Most Popular</div>
+                            <div className="mb-4 sm:mb-6">
+                                <h4 className="text-primary text-base sm:text-lg mb-1 sm:mb-2">Growth</h4>
+                                <div className="text-2xl sm:text-3xl font-bold text-foreground">Rs 599 <span className="text-xs sm:text-sm font-normal text-muted-foreground">/mo</span></div>
+                            </div>
+                            <ul className="space-y-3 sm:space-y-4 mb-6 sm:mb-8 text-xs sm:text-sm text-muted-foreground flex-1">
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Up to 5 Staff Accounts</li>
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Max 50 Catalog Medicines</li>
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Max 10 Dealers/Suppliers</li>
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Advanced FEFO Alerts</li>
+                            </ul>
+                            <button onClick={() => handlePlanUpdate('GROWTH')} disabled={profileData.plan === 'GROWTH'} className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all ${profileData.plan === 'GROWTH' ? 'bg-primary/20 text-primary border border-primary/30 cursor-not-allowed' : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm cursor-pointer'}`}>
+                                {profileData.plan === 'GROWTH' ? 'Current Plan' : 'Select Growth'}
+                            </button>
+                        </div>
+
+                        {/* PRO CARD */}
+                        <div className={`bg-card border ${profileData.plan === 'PRO' ? 'border-primary/50 shadow-md' : 'border-border'} rounded-2xl p-6 sm:p-8 flex flex-col`}>
+                            <div className="mb-4 sm:mb-6">
+                                <h4 className="text-muted-foreground text-base sm:text-lg mb-1 sm:mb-2">Pro</h4>
+                                <div className="text-2xl sm:text-3xl font-bold text-foreground">Rs 1499 <span className="text-xs sm:text-sm font-normal text-muted-foreground">/mo</span></div>
+                            </div>
+                            <ul className="space-y-3 sm:space-y-4 mb-6 sm:mb-8 text-xs sm:text-sm text-muted-foreground flex-1">
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Unlimited Staff, SKUs & Dealers</li>
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> StockEasy AI Assistant Access</li>
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> Full Enterprise Analytics</li>
+                                <li className="flex items-center gap-2 sm:gap-3"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" /> 24/7 Priority Support</li>
+                            </ul>
+                            <button onClick={() => handlePlanUpdate('PRO')} disabled={profileData.plan === 'PRO'} className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all ${profileData.plan === 'PRO' ? 'bg-primary/10 text-primary border border-primary/30 cursor-not-allowed' : 'border border-border text-foreground hover:bg-muted cursor-pointer'}`}>
+                                {profileData.plan === 'PRO' ? 'Current Plan' : 'Select Pro'}
+                            </button>
+                        </div>
+                    </div>
+                    <p className="text-center text-[10px] sm:text-xs text-muted-foreground pt-4">All plans are billed securely. Prices exclude applicable taxes.</p>
                 </div>
             )}
         </div>
