@@ -20,30 +20,54 @@ export default function ShopGatekeeper({ children }: { children: React.ReactNode
                     return;
                 }
 
+                // 1. Safely check the tenant table using .maybeSingle()
                 const { data: userData, error: userError } = await supabase
                     .from('users')
                     .select('shop_id, role')
                     .eq('id', user.id)
-                    .single();
+                    .maybeSingle();
 
                 if (userError) throw userError;
 
-                if (userData?.role === "SUPERADMIN" || userData?.role === "ADMIN") {
-                    setStatus("ACTIVE");
+                // 2. If no tenant profile found, check the secure Platform Admin vault
+                if (!userData) {
+                    const { data: platformAdmin } = await supabase
+                        .from('platform_admins')
+                        .select('role')
+                        .eq('id', user.id)
+                        .maybeSingle();
+
+                    if (platformAdmin) {
+                        // Super Admin detected! Route them to the control center
+                        router.push("/admin");
+                        return;
+                    } else {
+                        // Not a tenant, not an admin -> kick out
+                        await supabase.auth.signOut();
+                        router.push('/login?error=No active profile found.');
+                        return;
+                    }
+                }
+
+                // 3. Fallback for legacy admin setups in the users table
+                if (userData.role === "SUPERADMIN" || userData.role === "ADMIN") {
+                    router.push("/admin");
                     return;
                 }
 
-                if (!userData?.shop_id) {
+                // 4. Ensure tenant has a shop assigned
+                if (!userData.shop_id) {
                     await supabase.auth.signOut();
                     router.push('/login?error=Invalid account configuration. No shop assigned.');
                     return;
                 }
 
+                // 5. Verify Shop Status (using maybeSingle to prevent PGRST116 if shop is missing)
                 const { data: shopData, error: shopError } = await supabase
                     .from('shops')
                     .select('status')
                     .eq('id', userData.shop_id)
-                    .single();
+                    .maybeSingle();
 
                 if (shopError) throw shopError;
 

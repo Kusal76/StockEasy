@@ -57,13 +57,30 @@ export default function LoginPage() {
                 const { data: { user }, error: userError } = await supabase.auth.getUser();
                 if (userError || !user) throw new Error("No valid session");
 
-                const { data: userData } = await supabase
-                    .from('users')
+                // --- NEW ARCHITECTURE CHECK ---
+                // 1. Check Platform Admins vault first
+                const { data: platformData } = await supabase
+                    .from('platform_admins')
                     .select('role')
                     .eq('id', user.id)
                     .maybeSingle();
 
-                const role = userData?.role?.toUpperCase() || "STAFF";
+                let role = "STAFF";
+
+                if (platformData?.role) {
+                    role = platformData.role.toUpperCase();
+                } else {
+                    // 2. Fallback to generic users table
+                    const { data: userData } = await supabase
+                        .from('users')
+                        .select('role')
+                        .eq('id', user.id)
+                        .maybeSingle();
+
+                    if (userData?.role) {
+                        role = userData.role.toUpperCase();
+                    }
+                }
 
                 if (role === "ADMIN" || role === "SUPERADMIN") {
                     window.location.href = "/admin";
@@ -142,7 +159,32 @@ export default function LoginPage() {
                 }
             }
 
-            const userRole = preCheckData.role?.toUpperCase() || "STAFF";
+            // --- NEW ARCHITECTURE ROLE FETCHING ---
+            let userRole = preCheckData.role?.toUpperCase() || "STAFF";
+            let needsPasswordReset = false; // Add this new flag!
+
+            if (loginMode === "admin") {
+                // 1. Explicitly check the secure vault for CTOs
+                const { data: platformAdmin } = await supabase
+                    .from('platform_admins')
+                    .select('role, is_active, requires_password_change') // Added requires_password_change!
+                    .eq('id', authData.user.id)
+                    .maybeSingle();
+
+                if (platformAdmin) {
+                    if (!platformAdmin.is_active) {
+                        await supabase.auth.signOut();
+                        throw new Error("Account suspended by System Administration.");
+                    }
+                    userRole = platformAdmin.role.toUpperCase();
+                    needsPasswordReset = platformAdmin.requires_password_change; // Store the flag
+                } else {
+                    // 2. Check standard users table
+                    const { data: uAdmin } = await supabase.from('users').select('role').eq('id', authData.user.id).maybeSingle();
+                    if (uAdmin) userRole = uAdmin.role.toUpperCase();
+                }
+            }
+
             setPendingRole(userRole);
 
             if (userRole === "STAFF") {
@@ -167,6 +209,14 @@ export default function LoginPage() {
             if (loginMode === "admin" && userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
                 await supabase.auth.signOut();
                 throw new Error("Unauthorized Access: Administrator privileges required.");
+            }
+
+            // --- THE FIX: PASSWORD RESET BYPASS ---
+            // If they need a password reset, immediately route them to the admin area 
+            // where the middleware/layout will force the reset. DO NOT trigger 2FA yet.
+            if (needsPasswordReset) {
+                routeUser(userRole);
+                return;
             }
 
             // --- JIT SECURITY ONBOARDING & 2FA ENFORCEMENT ---
@@ -463,7 +513,7 @@ export default function LoginPage() {
                                 {loginMode === "admin" && (
                                     <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 sm:p-4 flex gap-2 sm:gap-3 mt-4 shadow-sm">
                                         <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
-                                        <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed font-medium">System Administrators must use their hardware security key (U2F) after providing credentials.</p>
+                                        <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed font-medium">System administrators must provide a valid authenticator app code (TOTP) after entering their credentials.</p>
                                     </div>
                                 )}
 

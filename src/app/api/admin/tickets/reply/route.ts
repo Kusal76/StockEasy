@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/app/lib/supabase-server';
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,20 +10,54 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
     try {
+        // --- SECURITY PERIMETER ---
+        const supabase = await createServerClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        // Include full_name in the query so we can build the signature
+        const { data: adminProfile } = await supabaseAdmin
+            .from('platform_admins')
+            .select('role, is_active, full_name')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (!adminProfile || !adminProfile.is_active) {
+            return NextResponse.json({ error: "Forbidden: Admin clearance required." }, { status: 403 });
+        }
+        // -------------------------
+
         const { dbId, displayId, email, name, originalMessage, adminReply } = await req.json();
 
         if (!dbId || !email || !adminReply) {
             return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
         }
 
-        // 1. Update the database: Save the reply and mark as RESOLVED
-        const { error: dbError } = await supabaseAdmin
+        // GENERATE THE SIGNATURE (e.g., "Kusal Dey (1234abcd)")
+        const shortUUID = user.id.substring(0, 8);
+        const adminName = adminProfile.full_name || "Platform Admin";
+        const adminSignature = `${adminName} (${shortUUID})`;
+
+        // 1. Update the database: ONLY if it is currently OPEN
+        const { data: updatedTicket, error: dbError } = await supabaseAdmin
             .from('support_tickets')
             .update({
                 status: 'RESOLVED',
-                admin_reply: adminReply
+                admin_reply: adminReply,
+                resolved_by: adminSignature
             })
-            .eq('id', dbId);
+            .eq('id', dbId)
+            .eq('status', 'OPEN') // THE SHIELD: Prevent overwriting resolved tickets
+            .select('id')
+            .maybeSingle();
+
+        if (dbError) throw new Error("Database error during ticket update.");
+
+        if (!updatedTicket) {
+            return NextResponse.json({
+                error: "Collision Detected: Another administrator has already resolved this ticket."
+            }, { status: 409 });
+        }
 
         if (dbError) throw new Error("Failed to update ticket and save reply.");
 
@@ -54,7 +89,7 @@ export async function POST(req: Request) {
                             <p style="color: #d4e4fa;">Our team has reviewed your ticket (<strong>${displayId}</strong>) and provided a resolution below:</p>
                             
                             <div style="background-color: #10b98115; padding: 15px; border-left: 4px solid #10b981; margin: 20px 0; border-radius: 4px;">
-                                <p style="margin: 0 0 8px 0; color: #10b981; font-size: 12px; font-weight: bold; text-transform: uppercase;">Support Response:</p>
+                                <p style="margin: 0 0 8px 0; color: #10b981; font-size: 12px; font-weight: bold; text-transform: uppercase;">Support Response (by ${adminName}):</p>
                                 <p style="margin: 0; color: #ffffff; white-space: pre-wrap; line-height: 1.5;">${adminReply}</p>
                             </div>
 

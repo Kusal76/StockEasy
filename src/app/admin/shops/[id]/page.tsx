@@ -7,6 +7,7 @@ import {
     ArrowLeft, Store, User, Package, Users, Receipt, CreditCard,
     CalendarDays, Loader2, Database, ShieldAlert, XCircle
 } from "lucide-react";
+import { supabase } from "../../../lib/supabase";
 
 type TabType = "inventory" | "staff" | "bills" | "invoices";
 
@@ -35,6 +36,21 @@ export default function TenantProfilePage({ params }: { params: Promise<{ id: st
     const fetchComprehensiveTenantData = async () => {
         setIsLoading(true);
         try {
+            // --- STRICT VAULT CHECK ---
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return router.push("/login");
+
+            const { data: platformAdmin } = await supabase
+                .from('platform_admins')
+                .select('is_active')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (!platformAdmin || !platformAdmin.is_active) {
+                console.warn("Unauthorized data access attempt.");
+                return router.push("/login");
+            }
+
             // Call our new secure backend API
             const res = await fetch(`/api/admin/shops/${id}`);
             const data = await res.json();

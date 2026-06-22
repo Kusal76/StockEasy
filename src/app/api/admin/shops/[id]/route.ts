@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/app/lib/supabase-server';
 
 // Use the Service Role Key to safely bypass RLS for Admin operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -9,6 +10,22 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        // --- SECURITY PERIMETER ---
+        const supabase = await createServerClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const { data: adminProfile } = await supabaseAdmin
+            .from('platform_admins')
+            .select('role, is_active')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (!adminProfile || !adminProfile.is_active) {
+            return NextResponse.json({ error: "Forbidden: Admin clearance required." }, { status: 403 });
+        }
+        // -------------------------
+
         const resolvedParams = await params;
         const { id } = resolvedParams;
 
@@ -44,6 +61,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        // --- SECURITY PERIMETER ---
+        const supabase = await createServerClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const { data: adminProfile } = await supabaseAdmin
+            .from('platform_admins')
+            .select('role, is_active')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (!adminProfile || !adminProfile.is_active) {
+            return NextResponse.json({ error: "Forbidden: Admin clearance required." }, { status: 403 });
+        }
+        // -------------------------
+
         const resolvedParams = await params;
         const { id } = resolvedParams;
         const body = await req.json();

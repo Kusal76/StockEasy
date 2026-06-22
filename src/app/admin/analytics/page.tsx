@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, Loader2 } from "lucide-react";
 import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -61,6 +62,7 @@ const FilterDropdown = ({ value, options, onChange }: { value: string, options: 
 };
 
 export default function AnalyticsPage() {
+    const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [timeRange, setTimeRange] = useState("This Year");
 
@@ -86,6 +88,21 @@ export default function AnalyticsPage() {
     const fetchAnalyticsData = async () => {
         try {
             setIsLoading(true);
+
+            // --- STRICT VAULT CHECK ---
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return router.push("/login");
+
+            const { data: platformAdmin } = await supabase
+                .from('platform_admins')
+                .select('is_active')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (!platformAdmin || !platformAdmin.is_active) {
+                console.warn("Unauthorized data access attempt.");
+                return router.push("/login");
+            }
 
             // Time filtering logic
             const now = new Date();

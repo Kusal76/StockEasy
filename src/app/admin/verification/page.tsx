@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { Loader2, ShieldCheck, Clock } from "lucide-react";
 
 export default function VerificationQueuePage() {
+    const router = useRouter();
     const [queue, setQueue] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -15,6 +17,21 @@ export default function VerificationQueuePage() {
 
     const fetchPendingShops = async () => {
         try {
+            // --- STRICT VAULT CHECK ---
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return router.push("/login");
+
+            const { data: platformAdmin } = await supabase
+                .from('platform_admins')
+                .select('is_active')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (!platformAdmin || !platformAdmin.is_active) {
+                console.warn("Unauthorized data access attempt.");
+                return router.push("/login");
+            }
+
             // Fetching only shops waiting for admin approval using the correct license_number column
             const { data, error } = await supabase
                 .from("shops")
@@ -65,7 +82,6 @@ export default function VerificationQueuePage() {
                         <p className="text-sm mt-1">All pharmacy registrations have been processed.</p>
                     </div>
                 ) : (
-                    // FIX: Wrapped table in overflow container with min-width
                     <div className="overflow-x-auto custom-scrollbar flex-1">
                         <table className="w-full text-left border-collapse whitespace-nowrap min-w-[600px]">
                             <thead>

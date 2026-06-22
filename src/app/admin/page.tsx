@@ -75,6 +75,9 @@ export default function SuperAdminDashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [planFilter, setPlanFilter] = useState<"ALL" | "STARTER" | "GROWTH" | "PRO">("ALL");
 
+    // Store profile info for personalized dashboard
+    const [adminProfile, setAdminProfile] = useState<{ full_name: string, role: string } | null>(null);
+
     const [metrics, setMetrics] = useState({ totalMrr: 0, activeShops: 0, suspendedShops: 0, pendingShops: 0 });
 
     useEffect(() => {
@@ -87,12 +90,27 @@ export default function SuperAdminDashboard() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return router.push("/login");
 
-            const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
+            // --- STRICT VAULT CHECK ---
+            // Only platform_admins are allowed here. No fallbacks.
+            const { data: platformAdmin } = await supabase
+                .from('platform_admins')
+                .select('role, is_active, full_name, requires_password_change')
+                .eq('id', user.id)
+                .maybeSingle();
 
-            if (userData?.role !== "SUPERADMIN" && userData?.role !== "ADMIN") {
-                return router.push("/dashboard");
+            if (!platformAdmin || !platformAdmin.is_active) {
+                console.warn("User is not an active platform admin. Kicking to login.");
+                return router.push("/login");
             }
 
+            // --- SECURITY INTERCEPTOR ---
+            if (platformAdmin.requires_password_change) {
+                return router.push("/admin/setup-password");
+            }
+
+            setAdminProfile(platformAdmin);
+
+            // --- REST OF YOUR EXISTING FETCH CODE ---
             const { data: allShops, error } = await supabase
                 .from('shops')
                 .select('*, users(email, contact_number, role)')
@@ -151,27 +169,38 @@ export default function SuperAdminDashboard() {
     };
 
     const toggleShopStatus = async (shopId: string, currentStatus: string, shopName: string) => {
-        const newStatus = currentStatus === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
-        const confirmMsg = newStatus === "SUSPENDED"
+        // We determine the intended ACTION rather than calculating the new status on the client.
+        const action = currentStatus === "SUSPENDED" ? "RESTORE" : "SUSPEND";
+        const confirmMsg = action === "SUSPEND"
             ? `WARNING: This will instantly lock ${shopName} out of their dashboard. Proceed?`
             : `Reactivate access for ${shopName}?`;
 
         if (!window.confirm(confirmMsg)) return;
 
+        // Optional: Add a temporary processing state UI here if desired, 
+        // though optimistic updates generally feel faster.
+
         try {
-            const { error } = await supabase
-                .from('shops')
-                .update({ status: newStatus })
-                .eq('id', shopId);
+            const res = await fetch('/api/admin/shops/toggle-access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ shopId, action })
+            });
 
-            if (error) throw error;
+            const data = await res.json();
 
-            const updatedShops = shops.map(s => s.id === shopId ? { ...s, status: newStatus } : s);
+            if (!res.ok) {
+                // If it's a 409 Conflict, show the specific collision warning
+                throw new Error(data.error || "Failed to update shop access.");
+            }
+
+            // Successfully updated via API. Now update local UI state.
+            const updatedShops = shops.map(s => s.id === shopId ? { ...s, status: data.newStatus } : s);
             setShops(updatedShops);
             calculateMetrics(updatedShops);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Status update error:", error);
-            alert("Failed to update shop status.");
+            alert(error.message);
         }
     };
 
@@ -195,7 +224,7 @@ export default function SuperAdminDashboard() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[80vh] bg-background text-muted-foreground transition-colors duration-300">
                 <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
-                <p className="font-mono text-sm tracking-widest uppercase font-bold">Authenticating SuperAdmin...</p>
+                <p className="font-mono text-sm tracking-widest uppercase font-bold">Authenticating Admin...</p>
             </div>
         );
     }
@@ -203,14 +232,16 @@ export default function SuperAdminDashboard() {
     return (
         <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500 transition-colors pb-10">
 
-            {/* Admin Header */}
+            {/* Admin Header - Personalized based on Role */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pb-4 border-b border-border">
                 <div>
                     <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
-                        <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive" />
-                        <span className="text-[9px] sm:text-[10px] font-mono font-bold text-destructive tracking-widest uppercase">Level 4 Clearance Active</span>
+                        <ShieldAlert className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${adminProfile?.role === 'SUPERADMIN' ? 'text-destructive' : 'text-primary'}`} />
+                        <span className={`text-[9px] sm:text-[10px] font-mono font-bold tracking-widest uppercase ${adminProfile?.role === 'SUPERADMIN' ? 'text-destructive' : 'text-primary'}`}>
+                            {adminProfile?.role === 'SUPERADMIN' ? 'Level 4 Clearance Active' : 'Level 3 Clearance Active'}
+                        </span>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Platform Overview</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Welcome, {adminProfile?.full_name || 'Admin'}</h1>
                     <p className="text-muted-foreground text-xs sm:text-sm mt-1 font-medium">Global SaaS metrics and top-level tenant monitoring.</p>
                 </div>
                 <button

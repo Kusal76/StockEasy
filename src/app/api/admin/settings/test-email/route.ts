@@ -1,40 +1,58 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/app/lib/supabase-server';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(req: Request) {
     try {
-        const { host, user, pass, to } = await req.json();
+        // --- SECURITY PERIMETER ---
+        const supabase = await createServerClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        if (!host || !user || !pass || !to) {
+        const { data: adminProfile } = await supabaseAdmin
+            .from('platform_admins')
+            .select('role, is_active')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (!adminProfile || !adminProfile.is_active || adminProfile.role !== "SUPERADMIN") {
+            return NextResponse.json({ error: "Forbidden: SuperAdmin clearance required." }, { status: 403 });
+        }
+        // -------------------------
+
+        const { host, user: smtpUser, pass, to } = await req.json();
+
+        if (!host || !smtpUser || !pass || !to) {
             return NextResponse.json({ error: "Missing required SMTP credentials or recipient email." }, { status: 400 });
         }
 
-        // Add this temporary log
         console.log("X-RAY - Testing SMTP with:", {
             host,
-            user,
+            user: smtpUser,
             passwordLength: pass ? pass.length : 0,
             passwordPreview: pass ? pass.substring(0, 3) + "***" : "EMPTY"
         });
 
-        // Configure the NodeMailer Transport
         const transporter = nodemailer.createTransport({
             host: host,
-            port: 587, // Standard secure SMTP port
-            secure: false, // true for 465, false for other ports
+            port: 587,
+            secure: false,
             auth: {
-                user: user,
+                user: smtpUser,
                 pass: pass
             }
         });
 
-        // 1. Verify the connection credentials
         await transporter.verify();
 
-        // 2. Send the actual test email
         const info = await transporter.sendMail({
-            from: `"StockEasy System" <${user}>`, // Sender address
-            to: to, // The admin's email testing the connection
+            from: `"StockEasy System" <${smtpUser}>`,
+            to: to,
             subject: '✅ StockEasy SMTP Gateway - Test Successful',
             html: `
                 <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">

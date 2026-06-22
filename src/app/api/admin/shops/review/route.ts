@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/app/lib/supabase-server';
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,15 +10,41 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
     try {
+        // --- SECURITY PERIMETER ---
+        const supabase = await createServerClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const { data: adminProfile } = await supabaseAdmin
+            .from('platform_admins')
+            .select('role, is_active')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (!adminProfile || !adminProfile.is_active) {
+            return NextResponse.json({ error: "Forbidden: Admin clearance required." }, { status: 403 });
+        }
+        // -------------------------
+
         const { shopId, status, rejectionReason } = await req.json(); // status will be 'ACTIVE' or 'REJECTED'
 
-        // 1. Update the shop status in the database
+        // 1. Update the shop status ONLY if it hasn't been processed yet
         const { data: shopData, error: updateError } = await supabaseAdmin
             .from('shops')
             .update({ status: status })
             .eq('id', shopId)
+            .in('status', ['PENDING', 'PENDING_DELETION']) // THE SHIELD: Only update if it's currently pending!
             .select('name, users(email, full_name)')
-            .single();
+            .maybeSingle(); // Use maybeSingle so it doesn't crash if 0 rows are updated
+
+        if (updateError) throw new Error("Database error during status update.");
+
+        // If shopData is null, it means the row wasn't updated because the status wasn't PENDING anymore!
+        if (!shopData) {
+            return NextResponse.json({
+                error: "Collision Detected: Another administrator has already processed this application."
+            }, { status: 409 }); // 409 Conflict Status Code
+        }
 
         if (updateError || !shopData) throw new Error("Failed to update shop status in database.");
 

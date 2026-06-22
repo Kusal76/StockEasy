@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
     Save, Shield, Key, Mail, AlertTriangle, CheckCircle2,
     Loader2, Globe, HardDrive, Smartphone, Send
@@ -10,6 +11,7 @@ import { supabase } from "../../lib/supabase";
 type SettingsTab = "general" | "security" | "gateways" | "system";
 
 export default function SuperAdminSettings() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<SettingsTab>("general");
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -55,6 +57,21 @@ export default function SuperAdminSettings() {
 
     const fetchSettingsAndSecurity = async () => {
         try {
+            // --- STRICT VAULT CHECK (SUPERADMIN ONLY) ---
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return router.push("/login");
+
+            const { data: platformAdmin } = await supabase
+                .from('platform_admins')
+                .select('role, is_active')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (!platformAdmin || !platformAdmin.is_active || platformAdmin.role !== "SUPERADMIN") {
+                console.warn("Unauthorized access: SuperAdmin clearance required.");
+                return router.push("/admin"); // Kick standard admins out of settings
+            }
+
             // 1. Fetch Global Settings
             const res = await fetch('/api/admin/settings');
             const data = await res.json();

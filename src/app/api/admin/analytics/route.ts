@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/app/lib/supabase-server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -7,10 +8,26 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET(req: Request) {
     try {
+        // --- SECURITY PERIMETER ---
+        const supabase = await createServerClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const { data: adminProfile } = await supabaseAdmin
+            .from('platform_admins')
+            .select('role, is_active')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        // Allows both ADMIN and SUPERADMIN to view the data
+        if (!adminProfile || !adminProfile.is_active) {
+            return NextResponse.json({ error: "Forbidden: Admin clearance required." }, { status: 403 });
+        }
+        // -------------------------
+
         const { searchParams } = new URL(req.url);
         const startDate = searchParams.get('startDate') || "2000-01-01T00:00:00.000Z";
 
-        // Fetch all platform data using the master key
         const [
             { count: totalCount },
             { count: activeCount },

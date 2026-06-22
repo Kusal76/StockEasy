@@ -6,13 +6,14 @@ import { supabase } from "../../lib/supabase";
 import { Loader2, Search, CheckCircle2, Clock, Mail, User, ShieldAlert, ArrowRight, RefreshCw, Send, MessageSquare, X } from "lucide-react";
 
 interface Ticket {
-    id: string; // The UUID from database
-    displayId: string; // The TKT-XXXX formatted ID
+    id: string;
+    displayId: string;
     name: string;
     email: string;
     message: string;
     status: string;
-    admin_reply?: string; // New field from our ALTER TABLE
+    admin_reply?: string;
+    resolved_by?: string; // ADDED
     created_at: string;
 }
 
@@ -28,6 +29,9 @@ export default function AdminSupportInbox() {
     const [adminReplyText, setAdminReplyText] = useState("");
     const [isResolving, setIsResolving] = useState(false);
 
+    // Hold current admin details for optimistic UI updates
+    const [currentAdmin, setCurrentAdmin] = useState<{ id: string, name: string } | null>(null);
+
     useEffect(() => {
         verifyAdminAndFetchTickets();
     }, []);
@@ -38,9 +42,25 @@ export default function AdminSupportInbox() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return router.push("/login");
 
-            const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
-            if (userData?.role !== "SUPERADMIN" && userData?.role !== "ADMIN") return router.push("/dashboard");
+            // --- STRICT VAULT CHECK ---
+            const { data: platformAdmin } = await supabase
+                .from('platform_admins')
+                .select('role, is_active, full_name') // Fetch full_name
+                .eq('id', user.id)
+                .maybeSingle();
 
+            if (!platformAdmin || !platformAdmin.is_active) {
+                console.warn("Unauthorized access attempt to Support Inbox.");
+                return router.push("/login");
+            }
+
+            // Save admin info to generate the optimistic signature later
+            setCurrentAdmin({
+                id: user.id,
+                name: platformAdmin.full_name || "Admin"
+            });
+
+            // Fetch the tickets
             const { data, error } = await supabase
                 .from('support_tickets')
                 .select('*')
@@ -55,7 +75,6 @@ export default function AdminSupportInbox() {
                 }));
                 setTickets(formattedData);
 
-                // If a ticket is currently selected, update its state too
                 if (selectedTicket) {
                     const updatedSelected = formattedData.find((ft: Ticket) => ft.id === selectedTicket.id);
                     if (updatedSelected) setSelectedTicket(updatedSelected);
@@ -69,31 +88,34 @@ export default function AdminSupportInbox() {
         }
     };
 
-    // Upgraded handle function with Optimistic UI (Instant Feedback)
     const handleSendReply = () => {
         if (!selectedTicket || !adminReplyText.trim()) return;
         if (!window.confirm("Send this reply and mark the ticket as resolved? An email will be sent to the user.")) return;
 
-        // 1. Capture the exact text and ticket data before we clear it
         const replyText = adminReplyText.trim();
         const ticketToResolve = selectedTicket;
 
-        // 2. OPTIMISTIC UPDATE: Instantly update the UI so the admin doesn't wait!
+        // Generate the optimistic signature
+        const signature = currentAdmin ? `${currentAdmin.name} (${currentAdmin.id.substring(0, 8)})` : "Admin";
+
+        // OPTIMISTIC UPDATE
         setTickets(prev => prev.map(t => t.id === ticketToResolve.id ? {
             ...t,
             status: 'RESOLVED',
-            admin_reply: replyText
+            admin_reply: replyText,
+            resolved_by: signature
         } : t));
 
         setSelectedTicket(prev => prev ? {
             ...prev,
             status: 'RESOLVED',
-            admin_reply: replyText
+            admin_reply: replyText,
+            resolved_by: signature
         } : null);
 
-        setAdminReplyText(""); // Instantly clear the text box
+        setAdminReplyText("");
 
-        // 3. FIRE AND FORGET: Run the heavy API/Email call silently in the background
+        // FIRE AND FORGET
         fetch('/api/admin/tickets/reply', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -108,7 +130,6 @@ export default function AdminSupportInbox() {
         })
             .then(async (res) => {
                 if (!res.ok) {
-                    // If the background email fails, alert the admin so they know it didn't go through
                     const data = await res.json();
                     console.error("Background Sync Error:", data.error);
                     alert(`Warning: The email for ${ticketToResolve.displayId} failed to send. Please check the logs.`);
@@ -179,7 +200,6 @@ export default function AdminSupportInbox() {
                                 className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors shadow-sm placeholder:text-muted-foreground/50"
                             />
                         </div>
-                        {/* FIX: Tab switching now automatically closes any selected ticket */}
                         <div className="flex bg-background p-1 rounded-lg border border-border">
                             <button
                                 onClick={() => { setStatusFilter("OPEN"); setSelectedTicket(null); }}
@@ -212,8 +232,7 @@ export default function AdminSupportInbox() {
                                         key={ticket.id}
                                         onClick={() => {
                                             setSelectedTicket(ticket);
-                                            setAdminReplyText(""); // Clear text box when switching tickets
-                                            // Optional: Scroll to bottom pane on mobile
+                                            setAdminReplyText("");
                                             if (window.innerWidth < 768) {
                                                 setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
                                             }
@@ -261,7 +280,6 @@ export default function AdminSupportInbox() {
                                     <p className="text-[10px] sm:text-xs font-mono text-muted-foreground">Submitted: {formatDate(selectedTicket.created_at)}</p>
                                 </div>
 
-                                {/* FIX: Explicit Close Button to dismiss the ticket view */}
                                 <button
                                     onClick={() => setSelectedTicket(null)}
                                     className="p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors cursor-pointer shrink-0"
@@ -326,9 +344,17 @@ export default function AdminSupportInbox() {
                                     </div>
                                 ) : (
                                     <div className="space-y-3 animate-in fade-in pt-4 border-t border-border">
-                                        <h3 className="text-xs sm:text-sm font-bold text-emerald-500 mb-2 sm:mb-3 uppercase tracking-wider flex items-center gap-2">
-                                            <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Administrative Resolution
-                                        </h3>
+                                        {/* SIGNATURE ADDED HERE */}
+                                        <div className="flex items-center justify-between mb-2 sm:mb-3">
+                                            <h3 className="text-xs sm:text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                                                <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Administrative Resolution
+                                            </h3>
+                                            {selectedTicket.resolved_by && (
+                                                <span className="text-[9px] sm:text-[10px] text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded border border-border shadow-sm">
+                                                    By: {selectedTicket.resolved_by}
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="p-4 sm:p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl shadow-sm">
                                             <p className="text-foreground text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
                                                 {selectedTicket.admin_reply || "Ticket resolved without a text response."}

@@ -12,7 +12,8 @@ import {
     Pill,
     LogOut,
     Activity,
-    Bot
+    Bot,
+    ShieldAlert
 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { supabase } from "../app/lib/supabase";
@@ -25,6 +26,7 @@ export default function Sidebar() {
         const fetchRole = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
+                // First check staff_profiles
                 const { data: staffData } = await supabase.from('staff_profiles').select('role').eq('id', user.id).maybeSingle();
 
                 if (staffData) {
@@ -32,9 +34,16 @@ export default function Sidebar() {
                     return;
                 }
 
-                const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
+                // If not staff, check users/user_profiles table
+                const { data } = await supabase.from('users').select('role').eq('id', user.id).maybeSingle();
                 if (data?.role) {
                     setUserRole(data.role.toUpperCase());
+                } else {
+                    // Fallback to check our new user_profiles structure
+                    const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).maybeSingle();
+                    if (profile?.role) {
+                        setUserRole(profile.role.toUpperCase());
+                    }
                 }
             }
         };
@@ -95,8 +104,18 @@ export default function Sidebar() {
             </nav>
 
             {/* Bottom Profile & Actions Section */}
-            <div className="p-4 border-t border-border bg-muted/10">
-                <div className="flex items-center justify-between mb-4 px-2">
+            <div className="p-4 border-t border-border bg-muted/10 space-y-3">
+                {userRole === "SUPERADMIN" && (
+                    <Link
+                        href="/admin"
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors border border-destructive/20 shadow-sm"
+                    >
+                        <ShieldAlert className="w-4 h-4" />
+                        Return to Admin Panel
+                    </Link>
+                )}
+
+                <div className="flex items-center justify-between mb-2 px-2">
                     <div className="flex flex-col">
                         <span className="text-[13px] font-bold text-foreground tracking-wide uppercase">{userRole}</span>
                         <span className="text-[11px] text-muted-foreground mt-0.5 font-medium">Session Active</span>

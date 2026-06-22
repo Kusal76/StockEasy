@@ -153,14 +153,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </aside>
 
                 {/* Main Content Area - RESPONSIVE MARGINS */}
-                <main className="flex-1 flex flex-col min-h-screen relative bg-background transition-colors duration-300 w-full md:ml-64">
+                {/* 1. Added h-[100dvh] and overflow-hidden to lock the page frame */}
+                <main className="flex-1 flex flex-col h-[100dvh] overflow-hidden relative bg-background transition-colors duration-300 w-full md:ml-64">
 
-                    <div className="sticky top-0 z-30">
+                    {/* 2. Removed sticky/top-0. flex-col will naturally keep this at the top */}
+                    <div className="z-30 shrink-0">
                         <DashboardHeader />
                     </div>
 
                     {/* RESPONSIVE PADDING (p-4 for mobile, p-10 for desktop) */}
-                    <div className="flex-1 p-4 md:p-10 overflow-x-hidden">
+                    {/* 3. Added overflow-y-auto and custom-scrollbar to make ONLY this area scrollable */}
+                    <div className="flex-1 p-4 md:p-10 overflow-y-auto overflow-x-hidden custom-scrollbar">
                         {children}
                     </div>
                 </main>

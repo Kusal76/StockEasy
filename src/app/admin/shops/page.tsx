@@ -106,6 +106,21 @@ export default function ShopsManagementPage() {
 
     const fetchAllShops = async () => {
         try {
+            // --- STRICT VAULT CHECK ---
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return router.push("/login");
+
+            const { data: platformAdmin } = await supabase
+                .from('platform_admins')
+                .select('is_active')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (!platformAdmin || !platformAdmin.is_active) {
+                console.warn("Unauthorized data access attempt.");
+                return router.push("/login");
+            }
+
             const { data, error } = await supabase
                 .from("shops")
                 .select(`
