@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/app/lib/supabase-server';
+import { tierLimits } from '@/app/lib/rate-limiter'; // IMPORT THE LIMITER
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -24,6 +25,26 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Forbidden: Admin clearance required." }, { status: 403 });
         }
         // -------------------------
+
+        // --- REDIS RATE LIMITER SHIELD ---
+        const { success, limit, remaining, reset } = await tierLimits.ADMIN.limit(user.id);
+
+        if (!success) {
+            console.warn(`🛑 RATE LIMIT EXCEEDED: Admin ${user.id} hit the brakes.`);
+            return new NextResponse(
+                JSON.stringify({ error: "Too many requests. Please wait a few seconds before syncing again." }),
+                {
+                    status: 429,
+                    headers: {
+                        'X-RateLimit-Limit': limit.toString(),
+                        'X-RateLimit-Remaining': remaining.toString(),
+                        'X-RateLimit-Reset': reset.toString(),
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+        }
+        // ------------------------------------
 
         const { searchParams } = new URL(req.url);
         const startDate = searchParams.get('startDate') || "2000-01-01T00:00:00.000Z";

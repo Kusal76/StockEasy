@@ -1,11 +1,85 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { CheckCircle2, UploadCloud, FileText, Eye, EyeOff, Trash2, Download, AlertCircle, Check, ShieldAlert, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { CheckCircle2, UploadCloud, FileText, Eye, EyeOff, Trash2, Download, AlertCircle, Check, ShieldAlert, Loader2, ChevronDown } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { supabase } from "../lib/supabase";
 import Image from "next/image";
 import Link from "next/link";
+
+// --- Custom UI Component for the Dropdown ---
+const FilterDropdown = ({
+    value,
+    options,
+    onChange,
+    icon: Icon,
+    className
+}: {
+    value: string,
+    options: { value: string, label: string }[],
+    onChange: (val: string) => void,
+    icon?: any,
+    className?: string
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedLabel = options.find((o) => o.value === value)?.label || value || "Select an option";
+
+    return (
+        <div className="relative w-full" ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className={className || "w-full bg-background border border-border rounded-xl flex items-center justify-between px-4 py-3 sm:py-3.5 shadow-sm transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20"}
+            >
+                <div className="flex items-center gap-2 pr-4 truncate">
+                    {Icon && <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
+                    <span className={`text-sm font-bold truncate ${!value && options[0]?.value === "" ? "text-muted-foreground" : "text-foreground"}`}>
+                        {selectedLabel}
+                    </span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 mt-1.5 w-full bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="py-1 max-h-[200px] overflow-y-auto custom-scrollbar">
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-muted ${value === opt.value ? 'bg-primary/10 text-primary font-bold' : 'text-foreground font-medium'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const BUSINESS_TYPE_OPTIONS = [
+    "Retail Pharmacy",
+    "Wholesale Distributor"
+];
 
 // Helper function remains unchanged
 const uploadDocument = async (file: File, folderName: string, userId: string) => {
@@ -603,12 +677,22 @@ export default function ShopRegistrationPage() {
                                             <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6 border-b border-border pb-2 sm:pb-3 transition-colors">Business Info</h2>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                                 <div><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">Shop Name <span className="text-primary">*</span></label><input type="text" value={formData.shopName} onChange={(e) => setFormData({ ...formData, shopName: e.target.value })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground/50 shadow-sm" placeholder="e.g. City Central Pharmacy" /></div>
-                                                <div><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">Business Type</label><select value={formData.businessType} onChange={(e) => setFormData({ ...formData, businessType: e.target.value })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all shadow-sm"><option>Retail Pharmacy</option><option>Wholesale Distributor</option></select></div>
-                                                <div><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">Business PAN <span className="text-primary">*</span></label><input type="text" maxLength={10} value={formData.pan} onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground/50 shadow-sm font-mono" placeholder="ABCDE1234F" /></div>
-                                                <div><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">GST Number <span className="text-primary">*</span></label><input type="text" maxLength={15} value={formData.gst} onChange={(e) => setFormData({ ...formData, gst: e.target.value.toUpperCase() })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground/50 shadow-sm font-mono" placeholder="15 char GSTIN" /></div>
-                                                <div className="md:col-span-2"><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">Drug License No. <span className="text-primary">*</span></label><input type="text" value={formData.license} onChange={(e) => setFormData({ ...formData, license: e.target.value.toUpperCase() })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground/50 shadow-sm font-mono" placeholder="DL-1234567" /></div>
-                                                <div className="md:col-span-1"><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">License Expiry Date <span className="text-primary">*</span></label><input type="date" value={formData.licenseExpiry} onChange={(e) => setFormData({ ...formData, licenseExpiry: e.target.value })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all shadow-sm" /></div>
-                                                <div className="md:col-span-2"><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">Registered Address <span className="text-primary">*</span></label><textarea rows={3} value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all resize-none placeholder:text-muted-foreground/50 shadow-sm" placeholder="Full street address..." /></div>
+
+                                                <div className="relative z-30">
+                                                    <label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">Business Type</label>
+                                                    <FilterDropdown
+                                                        value={formData.businessType}
+                                                        onChange={(val) => setFormData({ ...formData, businessType: val })}
+                                                        options={BUSINESS_TYPE_OPTIONS.map(bt => ({ value: bt, label: bt }))}
+                                                        className="w-full bg-background border border-border rounded-xl flex items-center justify-between px-3 sm:px-4 py-3 sm:py-3.5 shadow-sm transition-all duration-200 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                                                    />
+                                                </div>
+
+                                                <div className="relative z-20"><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">Business PAN <span className="text-primary">*</span></label><input type="text" maxLength={10} value={formData.pan} onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground/50 shadow-sm font-mono" placeholder="ABCDE1234F" /></div>
+                                                <div className="relative z-20"><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">GST Number <span className="text-primary">*</span></label><input type="text" maxLength={15} value={formData.gst} onChange={(e) => setFormData({ ...formData, gst: e.target.value.toUpperCase() })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground/50 shadow-sm font-mono" placeholder="15 char GSTIN" /></div>
+                                                <div className="md:col-span-2 relative z-10"><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">Drug License No. <span className="text-primary">*</span></label><input type="text" value={formData.license} onChange={(e) => setFormData({ ...formData, license: e.target.value.toUpperCase() })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground/50 shadow-sm font-mono" placeholder="DL-1234567" /></div>
+                                                <div className="md:col-span-1 relative z-0"><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">License Expiry Date <span className="text-primary">*</span></label><input type="date" value={formData.licenseExpiry} onChange={(e) => setFormData({ ...formData, licenseExpiry: e.target.value })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all shadow-sm" /></div>
+                                                <div className="md:col-span-2 relative z-0"><label className="block text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 sm:mb-2">Registered Address <span className="text-primary">*</span></label><textarea rows={3} value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full bg-background border border-border rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all resize-none placeholder:text-muted-foreground/50 shadow-sm" placeholder="Full street address..." /></div>
                                             </div>
                                         </div>
                                     )}

@@ -127,7 +127,11 @@ export default function ApplicationReviewPage({ params }: { params: Promise<{ id
             // 1. Recover the account: Set to ACTIVE and clear the deletion date
             const { error } = await supabase
                 .from('shops')
-                .update({ status: 'ACTIVE', scheduled_deletion_date: null })
+                .update({
+                    status: 'ACTIVE',
+                    scheduled_deletion_date: null,
+                    admin_notes: null
+                })
                 .eq('id', shopData.id);
 
             if (error) throw error;

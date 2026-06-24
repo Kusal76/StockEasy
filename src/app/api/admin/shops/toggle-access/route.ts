@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/app/lib/supabase-server';
+import { redis } from '@/app/lib/redis'; // 1. IMPORT REDIS
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
         }
         // -------------------------
 
-        const { shopId, action } = await req.json(); // action is 'SUSPEND' or 'RESTORE'
+        const { shopId, action } = await req.json();
 
         if (!shopId || !action) {
             return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
         const targetStatus = action === 'SUSPEND' ? 'SUSPENDED' : 'ACTIVE';
         const expectedCurrentStatus = action === 'SUSPEND' ? 'ACTIVE' : 'SUSPENDED';
 
-        // COLLISION PREVENTION: Only update if the status is exactly what we expect it to be
+        // COLLISION PREVENTION
         const { data: updatedShop, error } = await supabaseAdmin
             .from('shops')
             .update({ status: targetStatus })
@@ -51,8 +52,18 @@ export async function POST(req: Request) {
             }, { status: 409 });
         }
 
-        // Optional: If you want to automatically kick the owner out of their active session
-        // when suspended, you could add logic here to invalidate their auth token via Supabase Admin.
+        // --- 2. INSTANT REDIS AUTH REVOCATION ---
+        if (action === 'SUSPEND') {
+            // Add to blacklist and auto-expire the ban cache after 24 hours 
+            // (By then, their JWT is dead anyway, saving Redis RAM)
+            await redis.setex(`blacklist:shop:${shopId}`, 86400, 'SUSPENDED');
+            console.log(`🛑 Shop ${shopId} added to Redis Blacklist.`);
+        } else {
+            // Remove from blacklist if restored
+            await redis.del(`blacklist:shop:${shopId}`);
+            console.log(`✅ Shop ${shopId} removed from Redis Blacklist.`);
+        }
+        // ----------------------------------------
 
         return NextResponse.json({ success: true, newStatus: targetStatus });
     } catch (error: any) {

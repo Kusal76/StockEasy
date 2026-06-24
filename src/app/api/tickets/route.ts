@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
+import { Client } from '@upstash/qstash';
+
+// Initialize QStash
+const qstash = new Client({ token: process.env.QSTASH_TOKEN! });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-// Must use service key to bypass RLS for public forms
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(req: Request) {
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // 1. Save to Supabase and return the generated record
+        // 1. Save to Supabase
         const { data: ticket, error: dbError } = await supabaseAdmin
             .from('support_tickets')
             .insert([{ name, email, message, status: 'OPEN' }])
@@ -26,70 +27,22 @@ export async function POST(req: Request) {
 
         if (dbError || !ticket) throw new Error("Failed to log support ticket in the database.");
 
-        // 2. Format a professional Ticket ID (Using the first segment of the UUID)
         const friendlyTicketId = `TKT-${String(ticket.id).split('-')[0].toUpperCase()}`;
 
-        // 3. Fetch Live SMTP Settings from your platform configuration
-        const { data: settings } = await supabaseAdmin
-            .from('platform_settings')
-            .select('smtp_host, smtp_user, smtp_pass, platform_name')
-            .eq('id', 1)
-            .single();
+        // 2. Offload Email Dispatch to QStash
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000';
 
-        if (settings && settings.smtp_host && settings.smtp_pass) {
-            const transporter = nodemailer.createTransport({
-                host: settings.smtp_host,
-                port: 587,
-                secure: false, // Use TLS
-                auth: { user: settings.smtp_user, pass: settings.smtp_pass }
-            });
-
-            // 4. Send User Confirmation Email
-            try {
-                transporter.sendMail({
-                    from: `"${settings.platform_name} Support" <${settings.smtp_user}>`,
-                    to: email,
-                    subject: `Support Ticket Received: [${friendlyTicketId}]`,
-                    html: `
-                        <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #051424; color: #ffffff;">
-                            <h2 style="color: #10b981; text-align: center;">We've got your message!</h2>
-                            <p style="color: #d4e4fa;">Hello <strong>${name}</strong>,</p>
-                            <p style="color: #d4e4fa;">This is a confirmation that our support team has received your request. Your ticket reference is <strong>${friendlyTicketId}</strong>.</p>
-                            <div style="background-color: #0d1c2d; padding: 15px; border-left: 4px solid #10b981; margin: 20px 0;">
-                                <p style="margin: 0; color: #bdcabc; font-size: 12px; text-transform: uppercase;">Your Message:</p>
-                                <p style="margin: 5px 0 0 0; color: #ffffff; white-space: pre-wrap;">${message}</p>
-                            </div>
-                            <p style="color: #d4e4fa;">Our team will review this and get back to you shortly.</p>
-                        </div>
-                    `
-                });
-                console.log("User confirmation email sent.");
-            } catch (err) {
-                console.error("Failed to send user receipt email:", err);
+        await qstash.publishJSON({
+            url: `${baseUrl}/api/webhooks/support-new`,
+            body: {
+                name,
+                email,
+                message,
+                friendlyTicketId
             }
+        });
 
-            // 5. AWAIT: Send Admin Alert Email
-            try {
-                transporter.sendMail({
-                    from: `"${settings.platform_name} System" <${settings.smtp_user}>`,
-                    to: settings.smtp_user, // Alerting the admin's own email inbox
-                    subject: `🚨 New Support Ticket: [${friendlyTicketId}]`,
-                    html: `
-                        <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ef4444; border-radius: 10px; background-color: #051424; color: #ffffff;">
-                            <h2 style="color: #ef4444;">New Ticket: ${friendlyTicketId}</h2>
-                            <p><strong>From:</strong> ${name} (${email})</p>
-                            <p><strong>Status:</strong> OPEN</p>
-                            <hr style="border-color: #3e4a3f; margin: 20px 0;" />
-                            <p style="white-space: pre-wrap; color: #d4e4fa;">${message}</p>
-                        </div>
-                    `
-                });
-                console.log("Admin alert email sent.");
-            } catch (err) {
-                console.error("Failed to send admin alert email:", err);
-            }
-        }
-
+        // 3. Return instantly to the user
         return NextResponse.json({ success: true, ticketId: friendlyTicketId });
 
     } catch (error: any) {

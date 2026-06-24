@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Mail, Lock, EyeOff, Eye, ArrowRight, CheckCircle2, ShieldCheck, AlertCircle, AlertTriangle, Loader2, Users, Smartphone, QrCode } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../lib/supabase";
 
-export default function LoginPage() {
+// We wrap the main logic in a component so we can safely use useSearchParams inside a Suspense boundary
+function LoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+
     const [loginMode, setLoginMode] = useState<"portal" | "admin">("portal");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -32,6 +35,16 @@ export default function LoginPage() {
     const [qrCodeSvg, setQrCodeSvg] = useState("");
     const [factorId, setFactorId] = useState("");
 
+    // --- CHECK URL FOR KICKOUT ERRORS ---
+    useEffect(() => {
+        const urlError = searchParams.get('error');
+        if (urlError) {
+            setErrorMsg(decodeURIComponent(urlError));
+            // Optional: Clean the URL so the error doesn't persist on refresh
+            router.replace('/login');
+        }
+    }, [searchParams, router]);
+
     useEffect(() => {
         const checkStatus = async () => {
             try {
@@ -54,11 +67,15 @@ export default function LoginPage() {
 
         const checkExistingSession = async () => {
             try {
+                // If they were just kicked out and have an error, don't auto-redirect them
+                if (searchParams.get('error')) {
+                    if (isMounted) setIsCheckingSession(false);
+                    return;
+                }
+
                 const { data: { user }, error: userError } = await supabase.auth.getUser();
                 if (userError || !user) throw new Error("No valid session");
 
-                // --- NEW ARCHITECTURE CHECK ---
-                // 1. Check Platform Admins vault first
                 const { data: platformData } = await supabase
                     .from('platform_admins')
                     .select('role')
@@ -70,7 +87,6 @@ export default function LoginPage() {
                 if (platformData?.role) {
                     role = platformData.role.toUpperCase();
                 } else {
-                    // 2. Fallback to generic users table
                     const { data: userData } = await supabase
                         .from('users')
                         .select('role')
@@ -95,7 +111,7 @@ export default function LoginPage() {
 
         checkExistingSession();
         return () => { isMounted = false; };
-    }, []);
+    }, [searchParams]);
 
     const routeUser = (role: string) => {
         setTimeout(() => {
@@ -150,24 +166,50 @@ export default function LoginPage() {
                 body: JSON.stringify({ email, action: 'success' })
             });
 
+            // Fetch profile to get shop_id
             const { data: profile } = await supabase.from('users').select('shop_id').eq('id', authData.user.id).single();
+
             if (profile?.shop_id) {
-                const { data: shopData } = await supabase.from('shops').select('status').eq('id', profile.shop_id).single();
+                // --- FIXED: LIGHTNING REDIS BLACKLIST CHECK ---
+                let isBlacklisted = false;
+                try {
+                    const banRes = await fetch(`/api/auth/check-blacklist?shopId=${profile.shop_id}`);
+                    if (banRes.ok) {
+                        const banData = await banRes.json();
+                        isBlacklisted = banData.isBlacklisted;
+                    }
+                } catch (redisError) {
+                    console.error("Redis check failed during login", redisError);
+                    // Silently fail open and let Supabase fallback handle it
+                }
+
+                // Move the actual block/throw OUTSIDE the try/catch so it doesn't swallow its own error!
+                if (isBlacklisted) {
+                    await supabase.auth.signOut();
+                    throw new Error("Access Denied: Your pharmacy account has been suspended by the platform administrator.");
+                }
+
+                // Fallback check against database (using maybeSingle in case RLS hides it)
+                const { data: shopData } = await supabase.from('shops').select('status').eq('id', profile.shop_id).maybeSingle();
+
+                if (shopData?.status === 'SUSPENDED') {
+                    await supabase.auth.signOut();
+                    throw new Error("Access Denied: Your pharmacy account has been suspended by the platform administrator.");
+                }
+
                 if (shopData?.status === 'PENDING_DELETION') {
                     await supabase.auth.signOut();
                     throw new Error("Account has been deactivated and is scheduled for deletion. Contact support for recovery.");
                 }
             }
 
-            // --- NEW ARCHITECTURE ROLE FETCHING ---
             let userRole = preCheckData.role?.toUpperCase() || "STAFF";
-            let needsPasswordReset = false; // Add this new flag!
+            let needsPasswordReset = false;
 
             if (loginMode === "admin") {
-                // 1. Explicitly check the secure vault for CTOs
                 const { data: platformAdmin } = await supabase
                     .from('platform_admins')
-                    .select('role, is_active, requires_password_change') // Added requires_password_change!
+                    .select('role, is_active, requires_password_change')
                     .eq('id', authData.user.id)
                     .maybeSingle();
 
@@ -177,9 +219,8 @@ export default function LoginPage() {
                         throw new Error("Account suspended by System Administration.");
                     }
                     userRole = platformAdmin.role.toUpperCase();
-                    needsPasswordReset = platformAdmin.requires_password_change; // Store the flag
+                    needsPasswordReset = platformAdmin.requires_password_change;
                 } else {
-                    // 2. Check standard users table
                     const { data: uAdmin } = await supabase.from('users').select('role').eq('id', authData.user.id).maybeSingle();
                     if (uAdmin) userRole = uAdmin.role.toUpperCase();
                 }
@@ -211,21 +252,16 @@ export default function LoginPage() {
                 throw new Error("Unauthorized Access: Administrator privileges required.");
             }
 
-            // --- THE FIX: PASSWORD RESET BYPASS ---
-            // If they need a password reset, immediately route them to the admin area 
-            // where the middleware/layout will force the reset. DO NOT trigger 2FA yet.
             if (needsPasswordReset) {
                 routeUser(userRole);
                 return;
             }
 
-            // --- JIT SECURITY ONBOARDING & 2FA ENFORCEMENT ---
             const { data: factorsData } = await supabase.auth.mfa.listFactors();
             const hasVerifiedTOTP = factorsData?.totp?.some((factor: any) => factor.status === 'verified');
             const requiresGlobal2FA = preCheckData.settings?.require_2fa;
             const isAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
 
-            // Scenario 1: First-time setup required
             if (!hasVerifiedTOTP && (isAdmin || (userRole === "OWNER" && requiresGlobal2FA))) {
                 const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
                 if (enrollError) throw new Error("Failed to generate security QR code.");
@@ -237,14 +273,12 @@ export default function LoginPage() {
                 return;
             }
 
-            // Scenario 2: Returning user verification
             if (hasVerifiedTOTP && (isAdmin || (userRole === "OWNER" && requiresGlobal2FA))) {
                 setShow2FA(true);
                 setIsLoading(false);
                 return;
             }
 
-            // Scenario 3: Global policy is OFF, or user doesn't require 2FA
             if (!rememberMe) {
                 window.addEventListener("beforeunload", () => {
                     supabase.auth.signOut();
@@ -260,7 +294,6 @@ export default function LoginPage() {
         }
     };
 
-    // --- HANDLE FIRST TIME SETUP VERIFICATION ---
     const handleVerifySetup = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrorMsg("");
@@ -290,7 +323,6 @@ export default function LoginPage() {
         }
     };
 
-    // --- HANDLE RETURNING USER VERIFICATION ---
     const handleVerify2FA = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrorMsg("");
@@ -345,7 +377,6 @@ export default function LoginPage() {
 
     return (
         <div className="h-[100dvh] w-full bg-background flex transition-colors duration-300 overflow-hidden">
-
             {/* LEFT COLUMN: Branding & Value Prop */}
             <div className="hidden lg:flex lg:w-1/2 relative bg-card border-r border-border flex-col justify-between p-12 h-full transition-colors duration-300">
                 <div className="relative z-10">
@@ -377,7 +408,6 @@ export default function LoginPage() {
 
             {/* RIGHT COLUMN: Tabbed Login Form */}
             <div className="w-full lg:w-1/2 h-full overflow-y-auto custom-scrollbar flex flex-col p-4 sm:p-8 md:p-12 relative">
-
                 {/* Global Loading Overlay */}
                 {isCheckingSession && !show2FA && !show2FASetup && (
                     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -627,10 +657,16 @@ export default function LoginPage() {
                             </form>
                         </div>
                     )}
-
                 </div>
             </div>
-
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+            <LoginForm />
+        </Suspense>
     );
 }

@@ -1,7 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/app/lib/supabase-server';
+import { Client } from '@upstash/qstash';
 
-// Initialize Supabase with the ADMIN key to allow user creation
+// Initialize QStash
+const qstash = new Client({ token: process.env.QSTASH_TOKEN! });
+
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -9,69 +13,75 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
     try {
-        const { email, name, role, shopId, inviterId } = await req.json();
+        // --- SECURITY PERIMETER ---
+        const supabase = await createServerClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-            return NextResponse.json({ error: "Server misconfiguration. Missing Admin Key." }, { status: 500 });
-        }
-
-        // 1. Security Check: Ensure the person making the request is actually an OWNER
-        const { data: inviterData, error: inviterError } = await supabaseAdmin
+        // Ensure the person inviting is actually a shop Owner/Manager
+        const { data: inviterProfile } = await supabase
             .from('users')
             .select('role, shop_id')
-            .eq('id', inviterId)
+            .eq('id', user.id)
             .single();
 
-        if (inviterError || inviterData.role !== 'OWNER' || inviterData.shop_id !== shopId) {
-            return NextResponse.json({ error: "Unauthorized. Only shop owners can invite staff." }, { status: 403 });
+        if (!inviterProfile || !inviterProfile.shop_id || inviterProfile.role !== 'OWNER') {
+            return NextResponse.json({ error: "Forbidden: Only pharmacy owners can invite staff." }, { status: 403 });
+        }
+        // -------------------------
+
+        const { staffEmail, staffName } = await req.json();
+
+        if (!staffEmail || !staffName) {
+            return NextResponse.json({ error: "Email and Name are required." }, { status: 400 });
         }
 
-        // 2. --- THE 100% RELIABLE LOCAL DEMO BYPASS ---
-        const { data: linkData, error: inviteError } = await supabaseAdmin.auth.admin.generateLink({
+        const shopId = inviterProfile.shop_id;
+
+        // Fetch the shop name for the email
+        const { data: shopData } = await supabaseAdmin.from('shops').select('name').eq('id', shopId).single();
+        const shopName = shopData?.name || "the Pharmacy";
+
+        // 1. Ask Supabase to securely generate the invite link (WITHOUT sending an email)
+        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
             type: 'invite',
-            email: email,
+            email: staffEmail,
             options: {
-                data: { full_name: name, role: role, shop_id: shopId },
-                redirectTo: 'http://localhost:3000/set-password'
+                // Attach custom claims so the user is instantly tied to this specific pharmacy
+                data: {
+                    role: 'STAFF',
+                    shop_id: shopId,
+                    full_name: staffName
+                }
             }
         });
 
-        if (inviteError) {
-            if (inviteError.message.includes("already registered")) {
-                return NextResponse.json({ error: "This email is already registered." }, { status: 400 });
-            }
-            throw inviteError;
+        if (linkError || !linkData?.properties?.action_link) {
+            throw new Error(linkError?.message || "Failed to generate secure invite link.");
         }
 
-        // 🚨 PRINT THE UNTOUCHED LINK DIRECTLY TO YOUR VS CODE TERMINAL
-        console.log("\n\n🔥 PRISTINE INVITE LINK (COPY THIS DURING DEMO):");
-        console.log(linkData.properties?.action_link);
-        console.log("------------------------------------------------\n\n");
+        // Extract the magic URL!
+        const secureInviteLink = linkData.properties.action_link;
 
-        const newUserId = linkData.user.id;
+        // 2. Offload Email Dispatch to QStash
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000';
 
-        // 3. Bind the new user to the Shop in the public tables
-        await supabaseAdmin.from('users').insert({
-            id: newUserId,
-            shop_id: shopId,
-            role: role,
-            full_name: name,
-            email: email
+        await qstash.publishJSON({
+            url: `${baseUrl}/api/webhooks/staff-invite`,
+            body: {
+                staffEmail,
+                staffName,
+                shopName,
+                inviteLink: secureInviteLink
+            }
         });
 
-        await supabaseAdmin.from('staff_profiles').insert({
-            id: newUserId,
-            shop_id: shopId,
-            name: name,
-            email: email,
-            role: role,
-            status: 'PENDING'
-        });
+        console.log(`📨 Staff invite job queued for ${staffEmail}`);
 
-        return NextResponse.json({ success: true, message: "Invitation generated. Check your terminal." });
+        return NextResponse.json({ success: true, message: "Invitation sent successfully!" });
 
     } catch (error: any) {
-        console.error("Invite API Error:", error);
-        return NextResponse.json({ error: error.message || "Failed to generate invitation." }, { status: 500 });
+        console.error("Staff Invite Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

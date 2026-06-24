@@ -24,13 +24,13 @@ export default function ForgotPasswordPage() {
         setIsLoading(true);
 
         try {
-            // 1. Initialize the SSR-friendly client so the PKCE verifier goes into a cookie
+            // 1. Create a specialized SSR-compatible browser client
             const supabaseSSR = createBrowserClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL!,
                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
             );
 
-            // 2. Use THIS specific client to send the email
+            // 2. Use THIS client to send the email, so it saves the verifier in your cookies!
             const { error } = await supabaseSSR.auth.resetPasswordForEmail(email, {
                 redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
             });

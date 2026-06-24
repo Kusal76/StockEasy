@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
-import { PackagePlus, Save, Loader2, Pill, Hash, IndianRupee, Percent, TriangleAlert, Plus, Truck, ChevronDown } from "lucide-react";
+import { PackagePlus, Save, Loader2, Pill, Hash, IndianRupee, Percent, TriangleAlert, Plus, ChevronDown } from "lucide-react";
 
 interface CatalogMedicine {
+    id: string; // <-- ADDED: We need the ID for the batches table
     name: string;
     category: string;
     default_mrp: number | null;
@@ -145,10 +146,10 @@ export default function StockEntryPage() {
                 setShopPlan(validPlan);
             }
 
-            // Fetch Catalog
+            // Fetch Catalog (ADDED: Selecting 'id' here)
             const { data: catalogData } = await supabase
                 .from('medicines_catalog')
-                .select('name, category, default_mrp')
+                .select('id, name, category, default_mrp')
                 .eq('shop_id', userData.shop_id)
                 .order('name', { ascending: true });
 
@@ -191,7 +192,6 @@ export default function StockEntryPage() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Double check limits before saving
         const limits = PLAN_LIMITS[shopPlan];
 
         if (isNewMedicine && catalog.length >= limits.maxMeds) {
@@ -212,25 +212,39 @@ export default function StockEntryPage() {
             const inputQty = parseInt(formData.quantity);
             const inputMrp = parseFloat(formData.mrp);
 
-            // Format YYYY-MM to YYYY-MM-01 so PostgreSQL accepts it natively
             const dbFormattedExpiry = formData.expiry_date.length === 7
                 ? `${formData.expiry_date}-01`
                 : formData.expiry_date;
 
+            // --- 1. HANDLE MEDICINE CATALOG ID ---
+            let currentMedicineId: string | null = null;
+
             if (isNewMedicine) {
-                const { error: catError } = await supabase.from('medicines_catalog').insert({
+                const { data: newCat, error: catError } = await supabase.from('medicines_catalog').insert({
                     shop_id: userData.shop_id,
                     name: formData.medicine_name,
                     category: formData.category,
                     default_mrp: inputMrp,
                     generic_name: formData.generic_name || null,
                     manufacturer: formData.manufacturer || null
-                });
-                if (!catError) {
-                    setCatalog(prev => [...prev, { name: formData.medicine_name, category: formData.category, default_mrp: inputMrp }]);
+                }).select('id').single();
+
+                if (catError) throw catError;
+
+                if (newCat) {
+                    currentMedicineId = newCat.id;
+                    setCatalog(prev => [...prev, { id: newCat.id, name: formData.medicine_name, category: formData.category, default_mrp: inputMrp }]);
                 }
+            } else {
+                const matchedMed = catalog.find(m => m.name.toLowerCase() === formData.medicine_name.toLowerCase());
+                if (matchedMed) currentMedicineId = matchedMed.id;
             }
 
+            // --- 2. HANDLE DEALER ID ---
+            const matchedDealer = dealers.find(d => d.name === formData.dealer_name);
+            const currentDealerId = matchedDealer ? matchedDealer.id : null;
+
+            // --- 3. INSERT INTO MAIN INVENTORY ---
             const { error: insertError } = await supabase
                 .from('inventory')
                 .insert({
@@ -243,10 +257,32 @@ export default function StockEntryPage() {
                     initial_quantity: inputQty,
                     purchase_price: parseFloat(formData.purchase_price),
                     mrp: inputMrp,
-                    dealer_name: formData.dealer_name || null
+                    dealer_name: formData.dealer_name || null,
+                    generic_name: formData.generic_name || null
                 });
 
             if (insertError) throw insertError;
+
+            /// --- 4. INSERT INTO BATCHES TABLE (The Fix!) ---
+            if (currentMedicineId) {
+                const { error: batchError } = await supabase
+                    .from('batches')
+                    .insert({
+                        shop_id: userData.shop_id,
+                        medicine_id: currentMedicineId,
+                        dealer_id: currentDealerId,
+                        batch_number: formattedBatch,
+                        expiry_date: dbFormattedExpiry,
+                        quantity: inputQty,
+                        mrp: inputMrp, // <-- Added MRP
+                        purchase_price: parseFloat(formData.purchase_price) // <-- Added Purchase Price!
+                    });
+
+                if (batchError) {
+                    // We log this but don't throw, so the user's primary UI still succeeds if the schema is slightly off
+                    console.error("Batch Creation Warning:", batchError.message);
+                }
+            }
 
             setSuccessMessage(`Successfully recorded inward shipment: ${inputQty} units of ${formData.medicine_name}.`);
 
@@ -300,7 +336,6 @@ export default function StockEntryPage() {
 
     return (
         <div className="max-w-5xl mx-auto animate-in fade-in duration-500 space-y-6 sm:space-y-8 relative pb-10">
-
             {/* HEADER */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -442,7 +477,7 @@ export default function StockEntryPage() {
                                 <input type="number" min="1" required value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 font-mono placeholder:text-muted-foreground/40 shadow-sm" placeholder="Units" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs sm:text-sm font-bold text-foreground">Pur. Price (₹) *</label>
+                                <label className="text-xs sm:text-sm font-bold text-foreground">Buying Price (₹) *</label>
                                 <input type="number" step="0.01" min="0" required value={formData.purchase_price} onChange={e => setFormData({ ...formData, purchase_price: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary hover:bg-muted border border-transparent hover:border-border rounded-xl text-sm text-foreground focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all duration-200 font-mono placeholder:text-muted-foreground/40 shadow-sm" placeholder="Cost" />
                             </div>
                             <div className="space-y-2">

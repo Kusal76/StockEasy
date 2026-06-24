@@ -154,29 +154,48 @@ export default function SellPage() {
 
             setIsSearching(true);
             try {
+                // --- 1. COMPOSITION & BRAND SEARCH (The Secondary Helper) ---
+                // We query BOTH medicine_name and generic_name so pharmacists can 
+                // find identical compositions across different brands if they need to.
                 const { data, error } = await supabase
                     .from('inventory')
                     .select('id, medicine_name, generic_name, batch_number, quantity, mrp, expiry_date')
                     .eq('shop_id', shopId)
                     .or(`medicine_name.ilike.%${cleanQuery}%,generic_name.ilike.%${cleanQuery}%`)
                     .gt('quantity', 0)
-                    .order('expiry_date', { ascending: true })
+                    .order('expiry_date', { ascending: true }) // First Expire
+                    .order('quantity', { ascending: true })    // Tie-Breaker
                     .limit(20);
 
                 if (error) throw error;
 
                 const results = data || [];
+
+                // --- 2. BRAND-STRICT FEFO LOGIC (The Practical Rule) ---
+                // We strictly group by the exact medicine_name. This prevents the system 
+                // from telling the pharmacist to substitute a different brand just because 
+                // it expires earlier, which could violate prescription compliance.
                 const recommended = new Set<string>();
-                const seenCompositions = new Set<string>();
+                const batchCounts = new Map<string, number>();
 
                 results.forEach(item => {
-                    const groupKey = item.generic_name ? item.generic_name.toLowerCase().trim() : item.medicine_name.toLowerCase().trim();
-                    if (!seenCompositions.has(groupKey)) {
-                        recommended.add(item.id);
-                        seenCompositions.add(groupKey);
+                    const key = item.medicine_name.toLowerCase().trim();
+                    batchCounts.set(key, (batchCounts.get(key) || 0) + 1);
+                });
+
+                const seen = new Set<string>();
+                results.forEach(item => {
+                    const key = item.medicine_name.toLowerCase().trim();
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        if (batchCounts.get(key)! > 1) {
+                            recommended.add(item.id);
+                        }
                     }
                 });
 
+                // --- 3. UX Polish ---
+                // Bubble recommended "Sell First" items to the very top
                 results.sort((a, b) => {
                     const aRec = recommended.has(a.id);
                     const bRec = recommended.has(b.id);
@@ -268,9 +287,11 @@ export default function SellPage() {
     const cartGrandTotal = Math.round(rawTotal);
     const roundOffAmount = cartGrandTotal - rawTotal;
 
-    const generatePrintableInvoice = (billId: string, subTotal: number, discountPct: number, discountAmt: number, roundOff: number, grandTotal: number, items: CartItem[]) => {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
+    const generatePrintableInvoice = (printWindow: Window | null, billId: string, subTotal: number, discountPct: number, discountAmt: number, roundOff: number, grandTotal: number, items: CartItem[]) => {
+        if (!printWindow) {
+            alert("Pop-up blocked! Please allow pop-ups in your browser to print bills.");
+            return;
+        }
 
         const dateStr = new Date().toLocaleDateString('en-IN');
         const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -428,6 +449,8 @@ export default function SellPage() {
         const phoneRegex = /^\d{10}$/;
         if (!phoneRegex.test(customerPhone)) return setCheckoutError("Phone number must be exactly 10 digits.");
 
+        const printWindow = window.open('', '_blank');
+
         setIsCheckingOut(true);
 
         try {
@@ -466,7 +489,7 @@ export default function SellPage() {
                 await supabase.from('inventory').update({ quantity: newStock }).eq('id', item.id);
             }
 
-            generatePrintableInvoice(billData.id, cartSubTotal, discountVal, discountAmount, roundOffAmount, cartGrandTotal, cart);
+            generatePrintableInvoice(printWindow, billData.id, cartSubTotal, discountVal, discountAmount, roundOffAmount, cartGrandTotal, cart);
 
             setLastBillId(billData.id);
             setCart([]);
@@ -478,6 +501,8 @@ export default function SellPage() {
         } catch (error: any) {
             console.error("Checkout Error:", error);
             setCheckoutError(error.message || "Failed to process checkout.");
+
+            if (printWindow) printWindow.close();
         } finally {
             setIsCheckingOut(false);
         }
@@ -568,14 +593,15 @@ export default function SellPage() {
             </div>
 
             {/* RIGHT SIDE: CART & CHECKOUT */}
-            <div className="w-full lg:w-[400px] flex flex-col bg-card border border-border rounded-2xl shadow-md overflow-hidden shrink-0 mt-6 lg:mt-0">
+            <div className="w-full lg:w-[420px] lg:h-[750px] flex flex-col bg-card border border-border rounded-2xl shadow-md overflow-hidden shrink-0 mt-6 lg:mt-0">
                 <div className="p-5 border-b border-border bg-muted/30 flex items-center gap-3">
                     <ShoppingCart className="w-5 h-5 text-primary" />
                     <h2 className="font-bold text-foreground text-lg">Current Bill</h2>
                     <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">{cart.length} Items</span>
                 </div>
 
-                <div className="flex-1 max-h-[40vh] lg:max-h-none overflow-y-auto p-4 space-y-3 custom-scrollbar bg-card">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-card">
+
                     {cart.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-60 py-10">
                             {lastBillId ? (
@@ -617,7 +643,7 @@ export default function SellPage() {
                     )}
                 </div>
 
-                <div className="p-4 sm:p-5 bg-background border-t border-border space-y-4">
+                <div className="p-4 sm:p-5 bg-background border-t border-border space-y-4 shrink-0">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <input
                             type="text"
