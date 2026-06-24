@@ -1,12 +1,23 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // Initialize the Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: Request) {
     try {
-        const { message, shopContext } = await req.json();
+        const {
+            message,
+            shopContext,
+            shopId,
+            userId
+        } = await req.json();
 
         if (!process.env.GEMINI_API_KEY) {
             return NextResponse.json({
@@ -39,6 +50,19 @@ export async function POST(req: Request) {
         const result = await model.generateContent(message);
         const response = await result.response;
         const text = response.text();
+
+        try {
+            await supabaseAdmin
+                .from('ai_query_logs')
+                .insert({
+                    shop_id: shopId,
+                    user_id: userId,
+                    query_text: message,
+                    response_text: text
+                });
+        } catch (err) {
+            console.error('AI Log Error:', err);
+        }
 
         return NextResponse.json({ text });
 

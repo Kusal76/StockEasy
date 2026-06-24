@@ -23,6 +23,9 @@ export default function AIAssistantPage() {
     const [shopContext, setShopContext] = useState<string>("Loading context...");
     const [isRefreshingContext, setIsRefreshingContext] = useState(false);
 
+    const [shopId, setShopId] = useState<string>("");
+    const [userId, setUserId] = useState<string>("");
+
     // --- FEATURE GATING STATES ---
     const [isAuthorizing, setIsAuthorizing] = useState(true);
     const [shopPlan, setShopPlan] = useState<string>("STARTER");
@@ -56,6 +59,7 @@ export default function AIAssistantPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
+            setUserId(user.id);
             setUserEmail(user.email || "");
 
             // 1. HARD BLOCK: Check if they are in the staff table
@@ -67,6 +71,8 @@ export default function AIAssistantPage() {
 
             // Fetch the role alongside the shop_id (fallback check)
             const { data: userData } = await supabase.from('users').select('shop_id, role').eq('id', user.id).single();
+            setShopId(userData?.shop_id || "");
+
             if (!userData?.shop_id) return;
 
             if (userData.role?.toUpperCase() === "STAFF") {
@@ -195,7 +201,12 @@ export default function AIAssistantPage() {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: userMsg, shopContext })
+                body: JSON.stringify({
+                    message: userMsg,
+                    shopContext,
+                    shopId,
+                    userId
+                })
             });
 
             const data = await response.json();
