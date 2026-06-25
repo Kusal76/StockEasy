@@ -174,8 +174,9 @@ export default function DealersPage() {
         e.preventDefault();
         setValidationError("");
 
-        if (!editingId && isDealersFull) {
-            return setValidationError(`${shopPlan} Plan Limit Reached. Please upgrade.`);
+        // 🚨 THE SOFT LOCK: Prevent adding a NEW dealer if limit is reached
+        if (!editingId && dealers.length >= currentLimits.maxDealers) {
+            return setValidationError(`${shopPlan} Plan Limit Reached: You are only allowed ${currentLimits.maxDealers} dealers. Upgrade to Pro to add more.`);
         }
 
         if (formData.gst_number.length !== 15) {
@@ -200,20 +201,21 @@ export default function DealersPage() {
             const cleanName = formData.name.trim();
 
             if (editingId) {
+                // ... (Leave your existing update logic here)
                 const oldDealer = dealers.find(d => d.id === editingId);
-
                 const { error } = await supabase.from('dealers').update({ ...formData, name: cleanName }).eq('id', editingId);
                 if (error) throw error;
 
                 if (oldDealer && oldDealer.name !== cleanName) {
-                    await supabase
-                        .from('inventory')
-                        .update({ dealer_name: cleanName })
-                        .eq('shop_id', userData.shop_id)
-                        .eq('dealer_name', oldDealer.name);
+                    await supabase.from('inventory').update({ dealer_name: cleanName }).eq('shop_id', userData.shop_id).eq('dealer_name', oldDealer.name);
+                }
+            } else {
+                // 🚨 SECONDARY DATABASE CHECK (Just to be extra safe against race conditions)
+                const { count } = await supabase.from('dealers').select('*', { count: 'exact', head: true }).eq('shop_id', userData.shop_id);
+                if (count !== null && count >= currentLimits.maxDealers) {
+                    throw new Error(`${shopPlan} Plan Limit Reached.`);
                 }
 
-            } else {
                 const { error } = await supabase.from('dealers').insert([{ ...formData, name: cleanName, shop_id: userData.shop_id }]);
                 if (error) {
                     if (error.code === '23505') throw new Error("A dealer with this name already exists.");

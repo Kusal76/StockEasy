@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabase";
-import { Search, Plus, Loader2, Edit, Trash2, X, Pill, Save, Package, Filter, ChevronDown } from "lucide-react";
+import { Search, Plus, Loader2, Edit, Trash2, X, Pill, Save, Package, Filter, ChevronDown, AlertTriangle, Lock } from "lucide-react";
 
 interface CatalogMedicine {
     id: string;
@@ -14,6 +14,13 @@ interface CatalogMedicine {
     total_qty?: number;
     nearest_expiry?: string;
 }
+
+// --- STRICT DYNAMIC PLAN LIMITS ---
+const PLAN_LIMITS = {
+    STARTER: { maxMedicines: 5 },
+    GROWTH: { maxMedicines: 50 },
+    PRO: { maxMedicines: Infinity }
+};
 
 // Custom UI Component for the Filter Dropdown
 const FilterDropdown = ({
@@ -87,6 +94,10 @@ export default function MedicinesCatalogPage() {
     const [displayMedicines, setDisplayMedicines] = useState<CatalogMedicine[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    // --- FEATURE GATING STATE ---
+    const [shopPlan, setShopPlan] = useState<keyof typeof PLAN_LIMITS>("STARTER");
+    const [validationError, setValidationError] = useState("");
+
     // Filters
     const [searchQuery, setSearchQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("All");
@@ -133,6 +144,15 @@ export default function MedicinesCatalogPage() {
 
             const { data: userData } = await supabase.from('users').select('shop_id').eq('id', user.id).single();
             if (!userData?.shop_id) return;
+
+            // Fetch Plan securely
+            const { data: shopData } = await supabase.from('shops').select('plan').eq('id', userData.shop_id).single();
+            if (shopData?.plan) {
+                const validPlan = ["STARTER", "GROWTH", "PRO"].includes(shopData.plan.toUpperCase())
+                    ? shopData.plan.toUpperCase() as keyof typeof PLAN_LIMITS
+                    : "STARTER";
+                setShopPlan(validPlan);
+            }
 
             // 1. Fetch Catalog
             const { data: catalogData, error: catalogError } = await supabase
@@ -193,7 +213,18 @@ export default function MedicinesCatalogPage() {
         }
     };
 
+    const currentLimits = PLAN_LIMITS[shopPlan];
+    const isMedicinesFull = medicines.length >= currentLimits.maxMedicines;
+
     const openModal = (medicine?: CatalogMedicine) => {
+        setValidationError("");
+
+        // --- FEATURE GATING RESTRICTION ---
+        if (!medicine && isMedicinesFull) {
+            alert(`${shopPlan} Plan Limit Reached: You can only have ${currentLimits.maxMedicines} SKUs in your catalog on this plan. Please upgrade to add more medicines.`);
+            return;
+        }
+
         if (medicine) {
             setEditingId(medicine.id);
             setFormData({
@@ -212,6 +243,13 @@ export default function MedicinesCatalogPage() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setValidationError("");
+
+        // --- THE SOFT LOCK ---
+        if (!editingId && isMedicinesFull) {
+            return setValidationError(`${shopPlan} Plan Limit Reached. Please upgrade to add more medicines.`);
+        }
+
         setIsSaving(true);
 
         try {
@@ -244,6 +282,12 @@ export default function MedicinesCatalogPage() {
                         .eq('medicine_name', oldMed.name);
                 }
             } else {
+                // 🚨 SECONDARY DATABASE CHECK (Extra safety against race conditions)
+                const { count } = await supabase.from('medicines_catalog').select('*', { count: 'exact', head: true }).eq('shop_id', userData.shop_id);
+                if (count !== null && count >= currentLimits.maxMedicines) {
+                    throw new Error(`${shopPlan} Plan Limit Reached.`);
+                }
+
                 const { error } = await supabase.from('medicines_catalog').insert([payload]);
                 if (error) {
                     if (error.code === '23505') throw new Error("A medicine with this exact name already exists.");
@@ -255,7 +299,7 @@ export default function MedicinesCatalogPage() {
             setIsModalOpen(false);
         } catch (error: any) {
             console.error("Save error:", error);
-            alert(error.message || "Failed to save medicine.");
+            setValidationError(error.message || "Failed to save medicine.");
         } finally {
             setIsSaving(false);
         }
@@ -302,18 +346,24 @@ export default function MedicinesCatalogPage() {
                             </button>
                         </div>
 
+                        {validationError && (
+                            <div className="mx-4 sm:mx-6 mt-4 sm:mt-6 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-2 text-destructive text-sm font-bold animate-in fade-in">
+                                <AlertTriangle className="w-4 h-4 shrink-0" /> {validationError}
+                            </div>
+                        )}
+
                         {/* FIX: Removed custom-scrollbar and overflow-y-auto so the dropdown can break out */}
                         <div className="p-4 sm:p-6 pb-20 sm:pb-32">
                             <form id="medicine-form" onSubmit={handleSave} className="space-y-4 sm:space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                     <div className="space-y-2">
                                         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Brand Name & Strength *</label>
-                                        <input type="text" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="e.g. Calpol 500mg" />
+                                        <input type="text" required value={formData.name} onChange={e => { setFormData({ ...formData, name: e.target.value }); setValidationError(""); }} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="e.g. Calpol 500mg" />
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Generic Composition / Salt</label>
-                                        <input type="text" value={formData.generic_name} onChange={e => setFormData({ ...formData, generic_name: e.target.value })} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="e.g. Paracetamol" />
+                                        <input type="text" value={formData.generic_name} onChange={e => { setFormData({ ...formData, generic_name: e.target.value }); setValidationError(""); }} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="e.g. Paracetamol" />
                                     </div>
 
                                     <div className="space-y-2">
@@ -321,7 +371,7 @@ export default function MedicinesCatalogPage() {
                                         {/* FIX: Standard downward dropping filter */}
                                         <FilterDropdown
                                             value={formData.category}
-                                            onChange={(val) => setFormData({ ...formData, category: val })}
+                                            onChange={(val) => { setFormData({ ...formData, category: val }); setValidationError(""); }}
                                             options={CATEGORIES.map(cat => ({ value: cat, label: cat }))}
                                             className="w-full bg-background border border-border rounded-xl flex items-center justify-between px-4 py-2.5 sm:py-3 shadow-sm transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
                                         />
@@ -329,12 +379,12 @@ export default function MedicinesCatalogPage() {
 
                                     <div className="space-y-2">
                                         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Default M.R.P (₹)</label>
-                                        <input type="number" step="0.01" value={formData.default_mrp} onChange={e => setFormData({ ...formData, default_mrp: e.target.value })} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="0.00" />
+                                        <input type="number" step="0.01" value={formData.default_mrp} onChange={e => { setFormData({ ...formData, default_mrp: e.target.value }); setValidationError(""); }} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="0.00" />
                                     </div>
 
                                     <div className="space-y-2 md:col-span-2">
                                         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Manufacturer / Company</label>
-                                        <input type="text" value={formData.manufacturer} onChange={e => setFormData({ ...formData, manufacturer: e.target.value })} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="e.g. Cipla, Sun Pharma" />
+                                        <input type="text" value={formData.manufacturer} onChange={e => { setFormData({ ...formData, manufacturer: e.target.value }); setValidationError(""); }} className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" placeholder="e.g. Cipla, Sun Pharma" />
                                     </div>
                                 </div>
                             </form>
@@ -360,6 +410,18 @@ export default function MedicinesCatalogPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                    {/* DYNAMIC LIMIT BADGE */}
+                    <div className="flex items-center gap-2 bg-card border border-border px-4 py-2.5 rounded-xl shadow-sm w-full sm:w-auto justify-center shrink-0">
+                        <span className="text-xs text-muted-foreground">Plan:</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded border ${shopPlan === 'PRO' ? 'bg-[#EAB308]/10 text-[#EAB308] border-[#EAB308]/30' : 'bg-primary/10 text-primary border-primary/30'}`}>{shopPlan}</span>
+                        <div className="text-[11px] font-mono ml-2 flex items-center gap-2">
+                            <span className={isMedicinesFull ? "text-destructive font-bold flex items-center gap-1" : "text-muted-foreground"}>
+                                {isMedicinesFull && <Lock className="w-3 h-3" />}
+                                {medicines.length}/{currentLimits.maxMedicines === Infinity ? '∞' : currentLimits.maxMedicines} SKUs
+                            </span>
+                        </div>
+                    </div>
+
                     {/* CUSTOM FILTER DROPDOWN */}
                     <FilterDropdown
                         value={categoryFilter}
@@ -395,9 +457,10 @@ export default function MedicinesCatalogPage() {
                     </div>
                     <button
                         onClick={() => openModal()}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2 rounded-lg font-bold hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+                        className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${isMedicinesFull ? 'bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive hover:text-primary-foreground' : 'bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground'}`}
+                        title={isMedicinesFull ? "Catalog Limit Reached" : "Add New Medicine"}
                     >
-                        <Plus className="w-4 h-4" /> Add Medicine
+                        {isMedicinesFull ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />} Add Medicine
                     </button>
                 </div>
 

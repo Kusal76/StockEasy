@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
-import { PackagePlus, Save, Loader2, Pill, Hash, IndianRupee, Percent, TriangleAlert, Plus, ChevronDown } from "lucide-react";
+import { PackagePlus, Save, Loader2, Pill, Hash, IndianRupee, Percent, TriangleAlert, Plus, ChevronDown, AlertTriangle } from "lucide-react";
 
 interface CatalogMedicine {
     id: string; // <-- ADDED: We need the ID for the batches table
@@ -23,7 +23,7 @@ const CATEGORY_OPTIONS = [
     "Cream", "Ointment", "Inhaler", "Powder", "Surgical", "Other"
 ];
 
-// --- STRICT DYNAMIC PLAN LIMITS FOR DEMO ---
+// --- STRICT DYNAMIC PLAN LIMITS ---
 const PLAN_LIMITS = {
     STARTER: { maxMeds: 5 },
     GROWTH: { maxMeds: 50 },
@@ -104,6 +104,7 @@ export default function StockEntryPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
+    const [validationError, setValidationError] = useState(""); // <-- Added this to display the lock warning
 
     const [catalog, setCatalog] = useState<CatalogMedicine[]>([]);
     const [dealers, setDealers] = useState<Dealer[]>([]);
@@ -171,7 +172,12 @@ export default function StockEntryPage() {
         }
     };
 
+    // Evaluate Limits Dynamically
+    const currentLimits = PLAN_LIMITS[shopPlan];
+    const isMedsFull = catalog.length >= currentLimits.maxMeds;
+
     const handleMedicineSelect = (selectedName: string) => {
+        setValidationError(""); // Clear errors on typing
         const matchedMed = catalog.find(m => m.name.toLowerCase() === selectedName.toLowerCase());
         if (matchedMed) {
             setIsNewMedicine(false);
@@ -191,17 +197,16 @@ export default function StockEntryPage() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setValidationError("");
+        setSuccessMessage("");
 
-        const limits = PLAN_LIMITS[shopPlan];
-
-        if (isNewMedicine && catalog.length >= limits.maxMeds) {
-            alert(`${shopPlan} Plan Limit Reached: You have reached your maximum of ${limits.maxMeds} catalog items. Please upgrade your plan.`);
-            router.push('/dashboard/settings');
-            return;
+        // 🚨 THE REQUIRED SOFT LOCK LOGIC
+        if (isNewMedicine && isMedsFull) {
+            setValidationError(`${shopPlan} Plan Limit Reached: You have hit the limit of ${currentLimits.maxMeds} catalog SKUs. You can only restock existing medicines.`);
+            return; // Stops the function execution perfectly!
         }
 
         setIsSaving(true);
-        setSuccessMessage("");
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -263,7 +268,7 @@ export default function StockEntryPage() {
 
             if (insertError) throw insertError;
 
-            /// --- 4. INSERT INTO BATCHES TABLE (The Fix!) ---
+            /// --- 4. INSERT INTO BATCHES TABLE ---
             if (currentMedicineId) {
                 const { error: batchError } = await supabase
                     .from('batches')
@@ -274,12 +279,11 @@ export default function StockEntryPage() {
                         batch_number: formattedBatch,
                         expiry_date: dbFormattedExpiry,
                         quantity: inputQty,
-                        mrp: inputMrp, // <-- Added MRP
-                        purchase_price: parseFloat(formData.purchase_price) // <-- Added Purchase Price!
+                        mrp: inputMrp,
+                        purchase_price: parseFloat(formData.purchase_price)
                     });
 
                 if (batchError) {
-                    // We log this but don't throw, so the user's primary UI still succeeds if the schema is slightly off
                     console.error("Batch Creation Warning:", batchError.message);
                 }
             }
@@ -302,7 +306,7 @@ export default function StockEntryPage() {
             setTimeout(() => setSuccessMessage(""), 5000);
         } catch (error) {
             console.error("Save error:", error);
-            alert("Failed to process stock entry. Please verify your inputs.");
+            setValidationError("Failed to process stock entry. Please verify your inputs.");
         } finally {
             setIsSaving(false);
         }
@@ -330,9 +334,6 @@ export default function StockEntryPage() {
             </div>
         );
     }
-
-    const currentLimits = PLAN_LIMITS[shopPlan];
-    const isMedsFull = catalog.length >= currentLimits.maxMeds;
 
     return (
         <div className="max-w-5xl mx-auto animate-in fade-in duration-500 space-y-6 sm:space-y-8 relative pb-10">
@@ -362,6 +363,13 @@ export default function StockEntryPage() {
             {successMessage && (
                 <div className="bg-primary/10 border border-primary/30 p-4 rounded-xl flex items-center gap-3 text-primary font-bold animate-in slide-in-from-top-2 shadow-sm text-sm sm:text-base">
                     <Save className="w-5 h-5 shrink-0" /> {successMessage}
+                </div>
+            )}
+
+            {/* Added Validation Error Display */}
+            {validationError && (
+                <div className="bg-destructive/10 border border-destructive/30 p-4 rounded-xl flex items-center gap-3 text-destructive font-bold animate-in slide-in-from-top-2 shadow-sm text-sm sm:text-base">
+                    <AlertTriangle className="w-5 h-5 shrink-0" /> {validationError}
                 </div>
             )}
 
@@ -408,7 +416,7 @@ export default function StockEntryPage() {
                             </div>
                         </div>
 
-                        {/* Smart Expansion UI */}
+                        {/* Smart Expansion UI Restored */}
                         {isNewMedicine && formData.medicine_name.trim().length > 2 && (
                             <div className={`mt-4 sm:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 p-4 sm:p-5 border rounded-xl animate-in slide-in-from-top-2 duration-300 shadow-sm ${isMedsFull ? 'bg-destructive/5 border-destructive/30' : 'bg-primary/5 border-primary/20'}`}>
                                 <div className="md:col-span-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
