@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Client } from '@upstash/qstash';
 
-// Initialize QStash
-const qstash = new Client({ token: process.env.QSTASH_TOKEN! });
+// 🚨 THE FIX: Explicitly pass the baseUrl so QStash knows your region!
+const qstash = new Client({
+    token: process.env.QSTASH_TOKEN!,
+    baseUrl: process.env.QSTASH_URL!
+});
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
