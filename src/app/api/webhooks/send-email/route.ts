@@ -62,7 +62,7 @@ async function handler(req: Request) {
                     <p style="margin: 5px 0 0 0; color: #ffffff;">${rejectionReason}</p>
                 </div>
                 
-                <p style="color: #d4e4fa;">Please resolve the issue mentioned above and contact support to reopen your application.</p>
+                <p style="color: #d4e4fa;">Please resolve the issue mentioned above and register again.</p>
             </div>
         `;
 

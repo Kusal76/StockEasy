@@ -298,7 +298,6 @@ export default function ShopsManagementPage() {
                                 { value: "PENDING", label: "Pending" },
                                 { value: "PENDING_DELETION", label: "Deleting" },
                                 { value: "SUSPENDED", label: "Suspended" },
-                                { value: "REJECTED", label: "Rejected" },
                             ]}
                         />
                         <FilterDropdown
