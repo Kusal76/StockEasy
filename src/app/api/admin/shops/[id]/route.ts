@@ -80,12 +80,64 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const resolvedParams = await params;
         const { id } = resolvedParams;
         const body = await req.json();
-        const { newPlan } = body;
 
-        // Force override the subscription plan
+        // Extract both newPlan and status from the incoming request
+        const { newPlan, status } = body;
+
+        // 🚨 NEW: SECURE ACCOUNT ERADICATION FOR REJECTED SHOPS
+        if (status === "REJECTED") {
+            try {
+                // 1. Find all users tied to this rejected shop
+                const { data: shopUsers, error: fetchError } = await supabaseAdmin
+                    .from('users')
+                    .select('id')
+                    .eq('shop_id', id);
+
+                if (fetchError) throw fetchError;
+
+                // 2. Permanently delete them from Supabase Authentication
+                // This is what officially frees up their email address for re-registration
+                if (shopUsers && shopUsers.length > 0) {
+                    for (const shopUser of shopUsers) {
+                        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(shopUser.id);
+                        if (deleteError) {
+                            console.error(`Failed to delete auth user ${shopUser.id}:`, deleteError);
+                            // If this fails due to a foreign key constraint, you MUST run the ON DELETE CASCADE SQL fix in your Supabase dashboard
+                            return NextResponse.json({ error: "Database constraint blocking deletion. Ensure CASCADE is enabled on users table." }, { status: 500 });
+                        } else {
+                            console.log(`Successfully wiped rejected user ${shopUser.id} from Auth.`);
+                        }
+                    }
+                }
+
+                // 3. Completely delete the rejected shop from the database
+                const { error: shopDeleteError } = await supabaseAdmin
+                    .from('shops')
+                    .delete()
+                    .eq('id', id);
+
+                if (shopDeleteError) throw shopDeleteError;
+
+                return NextResponse.json({
+                    success: true,
+                    message: "Shop rejected. Owner account and shop data wiped so they can register again."
+                });
+
+            } catch (cleanupError: any) {
+                console.error("Error during rejected user cleanup:", cleanupError);
+                return NextResponse.json({ error: cleanupError.message }, { status: 500 });
+            }
+        }
+
+        // If it is NOT a rejection, proceed with the normal update logic
+        const updatePayload: any = {};
+        if (newPlan) updatePayload.plan = newPlan;
+        if (status) updatePayload.status = status;
+
+        // Update the shop record
         const { error } = await supabaseAdmin
             .from('shops')
-            .update({ plan: newPlan })
+            .update(updatePayload)
             .eq('id', id);
 
         if (error) throw error;

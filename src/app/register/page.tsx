@@ -45,7 +45,7 @@ const FilterDropdown = ({
             >
                 <div className="flex items-center gap-2 pr-4 truncate">
                     {Icon && <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
-                    <span className={`text-sm font-bold truncate ${!value && options[0]?.value === "" ? "text-muted-foreground" : "text-foreground"}`}>
+                    <span className={`text-sm font-medium truncate ${!value && options[0]?.value === "" ? "text-muted-foreground" : "text-foreground"}`}>
                         {selectedLabel}
                     </span>
                 </div>
@@ -64,7 +64,10 @@ const FilterDropdown = ({
                                     onChange(opt.value);
                                     setIsOpen(false);
                                 }}
-                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-muted ${value === opt.value ? 'bg-primary/10 text-primary font-bold' : 'text-foreground font-medium'}`}
+                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-muted ${value === opt.value
+                                        ? 'bg-primary/10 text-primary font-normal'
+                                        : 'text-foreground font-normal'
+                                    }`}
                             >
                                 {opt.label}
                             </button>
