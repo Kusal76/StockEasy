@@ -35,6 +35,7 @@ export async function POST(req: Request) {
         const { shopId, status, rejectionReason } = await req.json();
 
         // 1. Update the shop status ONLY if it hasn't been processed yet
+        // 🚨 ADDED 'id' to the select query so we know which Auth user to delete!
         const { data: shopData, error: updateError } = await supabaseAdmin
             .from('shops')
             .update(
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
             )
             .eq('id', shopId)
             .in('status', ['PENDING', 'PENDING_DELETION'])
-            .select('name, users(email, full_name)')
+            .select('name, users(id, email, full_name)')
             .maybeSingle();
 
         if (updateError) throw new Error("Database error during status update.");
@@ -89,7 +90,40 @@ export async function POST(req: Request) {
             console.log("📨 Email job pushed to QStash queue!");
         }
 
-        // 3. Return INSTANTLY so the Admin UI doesn't hang
+        // --- 3. 🚨 THE "WIPE THE SLATE CLEAN" LOGIC ---
+        if (status === "REJECTED") {
+            try {
+                // A. Delete the users from Supabase Authentication (Frees the email)
+                if (shopData.users && shopData.users.length > 0) {
+                    for (const shopUser of shopData.users) {
+                        const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(shopUser.id);
+                        if (authDeleteError) {
+                            console.error(`Failed to delete auth user ${shopUser.id}:`, authDeleteError.message);
+                        } else {
+                            console.log(`Successfully freed email for rejected user ${shopUser.id}`);
+                        }
+                    }
+                }
+
+                // B. Completely delete the shop row so the database is clean
+                const { error: shopDeleteError } = await supabaseAdmin
+                    .from('shops')
+                    .delete()
+                    .eq('id', shopId);
+
+                if (shopDeleteError) {
+                    console.error(`Failed to delete rejected shop ${shopId}:`, shopDeleteError.message);
+                } else {
+                    console.log(`Successfully erased rejected shop ${shopId}`);
+                }
+
+            } catch (cleanupError) {
+                console.error("Error during rejected user cleanup:", cleanupError);
+                // We don't crash here because the email is already on its way.
+            }
+        }
+
+        // 4. Return INSTANTLY so the Admin UI doesn't hang
         return NextResponse.json({ success: true, emailQueued: !!ownerEmail });
     } catch (error: any) {
         console.error("Shop Review API Error:", error);
