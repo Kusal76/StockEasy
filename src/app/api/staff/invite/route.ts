@@ -57,12 +57,27 @@ export async function POST(req: Request) {
             }
         });
 
-        if (linkError || !linkData?.properties?.action_link) {
+        if (linkError || !linkData?.properties?.action_link || !linkData.user) {
             throw new Error(linkError?.message || "Failed to generate secure invite link.");
         }
 
         // Extract the magic URL!
         const secureInviteLink = linkData.properties.action_link;
+
+        // Forcefully create the profile in the database!
+        const { error: profileError } = await supabaseAdmin.from('users').upsert({
+            id: linkData.user.id,
+            email: staffEmail,
+            full_name: staffName,
+            role: 'STAFF',
+            shop_id: shopId,
+            status: 'ACTIVE' // Pre-activate them so the login page accepts them
+        });
+
+        if (profileError) {
+            console.error("Failed to create database profile:", profileError);
+            throw new Error("Could not create the user profile in the database.");
+        }
 
         // 2. Offload Email Dispatch to QStash
         await qstash.publishJSON({

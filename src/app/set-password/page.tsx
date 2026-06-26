@@ -82,10 +82,15 @@ export default function SetPasswordPage() {
 
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
+                // FIX: Ensure the main 'users' table is marked as ACTIVE
+                await supabase.from('users').update({ status: 'ACTIVE' }).eq('id', user.id);
+
+                // Keep this if you are actively using a secondary staff_profiles table
                 await supabase.from('staff_profiles').update({ status: 'ACTIVE' }).eq('id', user.id);
             }
 
             router.push('/dashboard');
+
         } catch (error: any) {
             setErrorMsg(error.message || "Failed to secure account.");
             setIsSaving(false);
