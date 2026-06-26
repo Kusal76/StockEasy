@@ -411,7 +411,7 @@ export default function SettingsPage() {
         }
     };
 
-    // 🚨 UPDATED: Handles AAL1 to AAL2 elevation and password updates
+    // 🚨 UPDATED: Smart MFA Detection
     const handleUpdatePassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setPasswordMsg({ type: "", text: "" });
@@ -430,28 +430,29 @@ export default function SettingsPage() {
 
             if (signInError) throw new Error("Incorrect current password.");
 
-            // 2. Check current Assurance Level (AAL)
+            // 2. Ask Supabase if this specific user has an Authenticator App linked
             const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
             if (aalError) throw aalError;
 
-            // 3. If MFA is enrolled but not verified in this session, trigger challenge
+            // 3. If they HAVE an app linked (nextLevel === aal2) but haven't verified it this session
             if (aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
                 const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
                 if (factorsError) throw factorsError;
 
                 const totpFactor = factors.totp[0];
-                if (!totpFactor) throw new Error("MFA is required but no TOTP factor was found.");
+                if (!totpFactor) throw new Error("MFA is enrolled but no TOTP factor was found.");
 
                 const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: totpFactor.id });
                 if (challengeError) throw challengeError;
 
+                // Trigger the UI to ask for the code
                 setMfaChallengeData({ factorId: totpFactor.id, challengeId: challenge.id });
-                setPasswordMsg({ type: "warning", text: "Multi-Factor Authentication required to proceed." });
+                setPasswordMsg({ type: "warning", text: "Authenticator App code required to proceed." });
                 setIsUpdatingPassword(false);
-                return; // Stop here and wait for user to enter code
+                return; // Stop here and wait for the user to enter the code
             }
 
-            // 4. If AAL2 is satisfied (or MFA is not enabled), update password
+            // 4. If they DO NOT have an app linked, skip straight to updating the password!
             await commitPasswordUpdate();
 
         } catch (error: any) {
