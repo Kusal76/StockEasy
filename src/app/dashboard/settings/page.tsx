@@ -9,6 +9,11 @@ import {
     Ban, CreditCard, Smartphone, AlertTriangle, ChevronDown
 } from "lucide-react";
 
+import {
+    Eye,
+    EyeOff
+} from "lucide-react";
+
 type TabType = "profile" | "staff" | "password" | "subscription";
 
 interface StaffMember {
@@ -132,6 +137,12 @@ export default function SettingsPage() {
     const [passwordData, setPasswordData] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
     const [passwordMsg, setPasswordMsg] = useState({ type: "", text: "" });
+
+    const [showPassword, setShowPassword] = useState({
+        current: false,
+        new: false,
+        confirm: false,
+    });
 
     // 🚨 NEW: MFA States for Password Update
     const [mfaChallengeData, setMfaChallengeData] = useState<{ factorId: string, challengeId: string } | null>(null);
@@ -1065,15 +1076,120 @@ export default function SettingsPage() {
                         <form onSubmit={handleUpdatePassword} className="space-y-4 sm:space-y-5 animate-in fade-in duration-300">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Current Password</label>
-                                <input type="password" required value={passwordData.oldPassword} onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm shadow-sm" />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword.current ? "text" : "password"}
+                                        required
+                                        value={passwordData.oldPassword}
+                                        onChange={(e) =>
+                                            setPasswordData({
+                                                ...passwordData,
+                                                oldPassword: e.target.value
+                                            })
+                                        }
+                                        className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 pr-12 text-foreground text-sm shadow-sm"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        aria-label={
+                                            showPassword.current
+                                                ? "Hide password"
+                                                : "Show password"
+                                        }
+                                        onClick={() =>
+                                            setShowPassword(prev => ({
+                                                ...prev,
+                                                current: !prev.current
+                                            }))
+                                        }
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                    >
+                                        {showPassword.current ? (
+                                            <Eye className="w-5 h-5" />
+                                        ) : (
+                                            <EyeOff className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">New Password</label>
-                                <input type="password" required value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm shadow-sm" />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword.new ? "text" : "password"}
+                                        required
+                                        value={passwordData.newPassword}
+                                        onChange={(e) =>
+                                            setPasswordData({
+                                                ...passwordData,
+                                                newPassword: e.target.value
+                                            })
+                                        }
+                                        className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 pr-12 text-foreground text-sm shadow-sm"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        aria-label={
+                                            showPassword.new
+                                                ? "Hide password"
+                                                : "Show password"
+                                        }
+                                        onClick={() =>
+                                            setShowPassword(prev => ({
+                                                ...prev,
+                                                new: !prev.new
+                                            }))
+                                        }
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                    >
+                                        {showPassword.new ? (
+                                            <EyeOff className="w-5 h-5" />
+                                        ) : (
+                                            <Eye className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Confirm New Password</label>
-                                <input type="password" required value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm shadow-sm" />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword.confirm ? "text" : "password"}
+                                        required
+                                        value={passwordData.confirmPassword}
+                                        onChange={(e) =>
+                                            setPasswordData({
+                                                ...passwordData,
+                                                confirmPassword: e.target.value
+                                            })
+                                        }
+                                        className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 pr-12 text-foreground text-sm shadow-sm"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        aria-label={
+                                            showPassword.confirm
+                                                ? "Hide password"
+                                                : "Show password"
+                                        }
+                                        onClick={() =>
+                                            setShowPassword(prev => ({
+                                                ...prev,
+                                                confirm: !prev.confirm
+                                            }))
+                                        }
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                    >
+                                        {showPassword.confirm ? (
+                                            <EyeOff className="w-5 h-5" />
+                                        ) : (
+                                            <Eye className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
 
                             {passwordMsg.text && (
