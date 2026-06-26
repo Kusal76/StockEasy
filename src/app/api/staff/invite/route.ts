@@ -67,7 +67,7 @@ export async function POST(req: Request) {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000';
 
         await qstash.publishJSON({
-            url: `${baseUrl}/api/webhooks/staff-invite`,
+            url: `${baseUrl}/api/webhooks/onboarding/staff-invite`,
             body: {
                 staffEmail,
                 staffName,
