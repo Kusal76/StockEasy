@@ -42,12 +42,13 @@ export async function POST(req: Request) {
         const { data: shopData } = await supabaseAdmin.from('shops').select('name').eq('id', shopId).single();
         const shopName = shopData?.name || "the Pharmacy";
 
-        // 1. Ask Supabase to securely generate the invite link (WITHOUT sending an email)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'https://stock-easy-orpin.vercel.app';
+
         const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
             type: 'invite',
             email: staffEmail,
             options: {
-                // Attach custom claims so the user is instantly tied to this specific pharmacy
+                redirectTo: `${baseUrl}/set-password`,
                 data: {
                     role: 'STAFF',
                     shop_id: shopId,
@@ -64,8 +65,6 @@ export async function POST(req: Request) {
         const secureInviteLink = linkData.properties.action_link;
 
         // 2. Offload Email Dispatch to QStash
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000';
-
         await qstash.publishJSON({
             url: `${baseUrl}/api/webhooks/onboarding/staff-invite`,
             body: {

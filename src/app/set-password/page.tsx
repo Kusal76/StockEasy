@@ -3,11 +3,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
-import { ShieldCheck, Loader2, Lock, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Loader2, Lock, AlertTriangle, Eye, EyeOff } from "lucide-react";
 
 export default function SetPasswordPage() {
     const router = useRouter();
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -65,7 +69,9 @@ export default function SetPasswordPage() {
 
     const handleSetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
+
         if (password.length < 8) return setErrorMsg("Password must be at least 8 characters.");
+        if (password !== confirmPassword) return setErrorMsg("Passwords do not match. Please try again.");
 
         setIsSaving(true);
         setErrorMsg("");
@@ -122,25 +128,49 @@ export default function SetPasswordPage() {
                 <h1 className="text-2xl font-bold text-foreground text-center mb-2">Secure Your Account</h1>
                 <p className="text-muted-foreground text-sm font-medium text-center mb-8">Welcome to the team. Please set a permanent password for your staff account.</p>
 
-                <form onSubmit={handleSetPassword} className="space-y-6">
+                <form onSubmit={handleSetPassword} className="space-y-5">
+
+                    {/* Password Field */}
                     <div className="space-y-2">
                         <label className="text-xs font-mono font-bold text-muted-foreground uppercase tracking-wider">New Password</label>
                         <div className="relative group">
                             <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
                             <input
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl pl-11 pr-4 py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-muted-foreground/50 shadow-sm"
+                                className="w-full bg-background border border-border rounded-xl pl-11 pr-12 py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-muted-foreground/50 shadow-sm"
                                 placeholder="Min 8 characters"
                             />
+                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+                                {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Confirm Password Field */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-mono font-bold text-muted-foreground uppercase tracking-wider">Confirm Password</label>
+                        <div className="relative group">
+                            <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                            <input
+                                type={showConfirmPassword ? "text" : "password"}
+                                required
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl pl-11 pr-12 py-3.5 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-muted-foreground/50 shadow-sm"
+                                placeholder="Repeat your new password"
+                            />
+                            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+                                {showConfirmPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                            </button>
                         </div>
                     </div>
 
                     {errorMsg && <p className="text-destructive text-sm font-bold text-center">{errorMsg}</p>}
 
-                    <button type="submit" disabled={isSaving || !password} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer shadow-sm">
+                    <button type="submit" disabled={isSaving || !password || !confirmPassword} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer shadow-sm">
                         {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save & Enter Dashboard"}
                     </button>
                 </form>
