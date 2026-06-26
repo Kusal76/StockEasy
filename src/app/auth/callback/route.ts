@@ -54,11 +54,29 @@ export async function GET(request: Request) {
                 if (profile) {
                     const userRole = profile.role?.toUpperCase();
 
-                    if (userRole === 'ADMIN' || userRole === 'SUPERADMIN') {
+                    // Admins
+                    if (userRole === "ADMIN" || userRole === "SUPERADMIN") {
                         return NextResponse.redirect(`${origin}/admin`);
                     }
 
-                    if (profile.shop_id && (userRole === 'OWNER' || userRole === 'STAFF')) {
+                    // NEW: Check whether staff account is suspended
+                    if (userRole === "STAFF") {
+                        const { data: staffProfile } = await supabase
+                            .from("staff_profiles")
+                            .select("status")
+                            .eq("email", user.email)
+                            .single();
+
+                        if (staffProfile?.status === "SUSPENDED") {
+                            await supabase.auth.signOut();
+
+                            return NextResponse.redirect(
+                                `${origin}/login?error=Your%20account%20has%20been%20SUSPENDED%20by%20the%20pharmacy%20owner.%20Please%20contact%20them%20to%20restore%20access.`
+                            );
+                        }
+                    }
+
+                    if (profile.shop_id && (userRole === "OWNER" || userRole === "STAFF")) {
                         return NextResponse.redirect(`${origin}${next}`);
                     }
                 }
