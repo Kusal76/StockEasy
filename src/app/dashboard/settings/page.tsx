@@ -80,8 +80,8 @@ const FilterDropdown = ({
                                     setIsOpen(false);
                                 }}
                                 className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-muted ${value === opt.value
-                                        ? 'bg-primary/10 text-primary'
-                                        : 'text-foreground'
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'text-foreground'
                                     }`}
                             >
                                 {opt.label}
@@ -132,6 +132,10 @@ export default function SettingsPage() {
     const [passwordData, setPasswordData] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
     const [passwordMsg, setPasswordMsg] = useState({ type: "", text: "" });
+
+    // 🚨 NEW: MFA States for Password Update
+    const [mfaChallengeData, setMfaChallengeData] = useState<{ factorId: string, challengeId: string } | null>(null);
+    const [mfaCode, setMfaCode] = useState("");
 
     // Simulator State
     const [simulatorOpen, setSimulatorOpen] = useState(false);
@@ -407,6 +411,7 @@ export default function SettingsPage() {
         }
     };
 
+    // 🚨 UPDATED: Handles AAL1 to AAL2 elevation and password updates
     const handleUpdatePassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setPasswordMsg({ type: "", text: "" });
@@ -417,6 +422,7 @@ export default function SettingsPage() {
 
         setIsUpdatingPassword(true);
         try {
+            // 1. Verify current password
             const { error: signInError } = await supabase.auth.signInWithPassword({
                 email: userEmail,
                 password: passwordData.oldPassword
@@ -424,18 +430,76 @@ export default function SettingsPage() {
 
             if (signInError) throw new Error("Incorrect current password.");
 
-            const { error: updateError } = await supabase.auth.updateUser({ password: passwordData.newPassword });
-            if (updateError) throw updateError;
+            // 2. Check current Assurance Level (AAL)
+            const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            if (aalError) throw aalError;
 
-            setPasswordMsg({ type: "success", text: "Password updated successfully!" });
-            setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
-            setTimeout(() => setPasswordMsg({ type: "", text: "" }), 4000);
+            // 3. If MFA is enrolled but not verified in this session, trigger challenge
+            if (aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
+                const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+                if (factorsError) throw factorsError;
+
+                const totpFactor = factors.totp[0];
+                if (!totpFactor) throw new Error("MFA is required but no TOTP factor was found.");
+
+                const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: totpFactor.id });
+                if (challengeError) throw challengeError;
+
+                setMfaChallengeData({ factorId: totpFactor.id, challengeId: challenge.id });
+                setPasswordMsg({ type: "warning", text: "Multi-Factor Authentication required to proceed." });
+                setIsUpdatingPassword(false);
+                return; // Stop here and wait for user to enter code
+            }
+
+            // 4. If AAL2 is satisfied (or MFA is not enabled), update password
+            await commitPasswordUpdate();
+
         } catch (error: any) {
             setPasswordMsg({ type: "error", text: error.message || "Failed to update password." });
-        } finally {
             setIsUpdatingPassword(false);
         }
     };
+
+    // 🚨 NEW: Handles verifying the 6-digit MFA code
+    const handleVerifyMfaAndUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!mfaChallengeData || mfaCode.length !== 6) {
+            setPasswordMsg({ type: "error", text: "Please enter a valid 6-digit code." });
+            return;
+        }
+
+        setIsUpdatingPassword(true);
+        try {
+            const { error: verifyError } = await supabase.auth.mfa.verify({
+                factorId: mfaChallengeData.factorId,
+                challengeId: mfaChallengeData.challengeId,
+                code: mfaCode
+            });
+
+            if (verifyError) throw new Error("Invalid authenticator code.");
+
+            // Session is now AAL2! Proceed to update password.
+            await commitPasswordUpdate();
+
+        } catch (error: any) {
+            setPasswordMsg({ type: "error", text: error.message || "MFA verification failed." });
+            setIsUpdatingPassword(false);
+        }
+    };
+
+    // 🚨 NEW: The actual password commit logic extracted for reuse
+    const commitPasswordUpdate = async () => {
+        const { error: updateError } = await supabase.auth.updateUser({ password: passwordData.newPassword });
+        if (updateError) throw updateError;
+
+        setPasswordMsg({ type: "success", text: "Password updated successfully!" });
+        setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
+        setMfaChallengeData(null);
+        setMfaCode("");
+        setIsUpdatingPassword(false);
+        setTimeout(() => setPasswordMsg({ type: "", text: "" }), 4000);
+    };
+
 
     const handlePlanUpdate = async (newPlan: string) => {
         if (!shopId) return;
@@ -839,17 +903,17 @@ export default function SettingsPage() {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Shop's Primary Contact Number *</label>
+                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Primary Contact Number *</label>
                                     <input type="text" inputMode="numeric" pattern="[0-9]{10}" required value={profileData.contact_number} onChange={e => handlePhoneChange(e.target.value, "contact_number")} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono" placeholder="10-digit mobile number" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Shop's Alternate Contact Number</label>
+                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Alternate Contact Number</label>
                                     <input type="text" inputMode="numeric" pattern="[0-9]{10}" value={profileData.alternate_contact_no || ""} onChange={e => handlePhoneChange(e.target.value, "alternate_contact_no")} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono" placeholder="Optional 10-digit number" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 items-start">
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Shop's Business Email Address</label>
+                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Business Email Address</label>
                                     <input type="email" value={profileData.email_address} onChange={e => setProfileData({ ...profileData, email_address: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" />
                                 </div>
                                 <div className="space-y-1.5">
@@ -960,29 +1024,69 @@ export default function SettingsPage() {
                             <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Update your account password to maintain security.</p>
                         </div>
                     </div>
-                    <form onSubmit={handleUpdatePassword} className="space-y-4 sm:space-y-5">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Current Password</label>
-                            <input type="password" required value={passwordData.oldPassword} onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">New Password</label>
-                            <input type="password" required value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Confirm New Password</label>
-                            <input type="password" required value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm" />
-                        </div>
-                        {passwordMsg.text && (
-                            <div className={`p-3 rounded-lg text-sm font-bold flex items-center gap-2 ${passwordMsg.type === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
-                                {passwordMsg.type === 'error' ? <ShieldAlert className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
-                                {passwordMsg.text}
+
+                    {/* 🚨 NEW: Show MFA challenge form if AAL1 needs to jump to AAL2 */}
+                    {mfaChallengeData ? (
+                        <form onSubmit={handleVerifyMfaAndUpdate} className="space-y-5 animate-in slide-in-from-right-4 duration-300">
+                            <div className="p-4 bg-primary/10 border border-primary/30 rounded-xl mb-4">
+                                <p className="text-sm font-bold text-primary mb-1">Action Requires Verification</p>
+                                <p className="text-xs text-muted-foreground">Please open your authenticator app and enter the 6-digit code to authorize this password change.</p>
                             </div>
-                        )}
-                        <button type="submit" disabled={isUpdatingPassword || !passwordData.newPassword || !passwordData.oldPassword} className="w-full px-8 py-3 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-4 sm:mt-6 cursor-pointer text-sm sm:text-base">
-                            {isUpdatingPassword && <Loader2 className="w-4 h-4 animate-spin" />} Update Password
-                        </button>
-                    </form>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">6-Digit Code</label>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    maxLength={6}
+                                    required
+                                    value={mfaCode}
+                                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                                    className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-3 text-foreground text-lg tracking-[0.5em] font-mono text-center shadow-sm"
+                                    placeholder="••••••"
+                                />
+                            </div>
+
+                            {passwordMsg.text && passwordMsg.type === 'error' && (
+                                <div className="p-3 rounded-lg text-sm font-bold flex items-center gap-2 bg-destructive/10 text-destructive">
+                                    <ShieldAlert className="w-4 h-4 shrink-0" /> {passwordMsg.text}
+                                </div>
+                            )}
+
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setMfaChallengeData(null)} className="w-full px-4 py-3 rounded-xl font-bold text-muted-foreground bg-muted hover:bg-muted/80 transition-colors cursor-pointer text-sm">Cancel</button>
+                                <button type="submit" disabled={isUpdatingPassword || mfaCode.length !== 6} className="w-full px-4 py-3 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer text-sm">
+                                    {isUpdatingPassword && <Loader2 className="w-4 h-4 animate-spin" />} Verify & Update
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleUpdatePassword} className="space-y-4 sm:space-y-5 animate-in fade-in duration-300">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Current Password</label>
+                                <input type="password" required value={passwordData.oldPassword} onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm shadow-sm" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">New Password</label>
+                                <input type="password" required value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm shadow-sm" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Confirm New Password</label>
+                                <input type="password" required value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className="w-full bg-secondary border border-border focus:border-primary outline-none transition-colors rounded-xl px-4 py-2.5 text-foreground text-sm shadow-sm" />
+                            </div>
+
+                            {passwordMsg.text && (
+                                <div className={`p-3 rounded-lg text-sm font-bold flex items-center gap-2 ${passwordMsg.type === 'error' ? 'bg-destructive/10 text-destructive' : passwordMsg.type === 'warning' ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'}`}>
+                                    {passwordMsg.type === 'error' ? <ShieldAlert className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
+                                    {passwordMsg.text}
+                                </div>
+                            )}
+
+                            <button type="submit" disabled={isUpdatingPassword || !passwordData.newPassword || !passwordData.oldPassword} className="w-full px-8 py-3 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-4 sm:mt-6 cursor-pointer text-sm sm:text-base shadow-sm">
+                                {isUpdatingPassword && <Loader2 className="w-4 h-4 animate-spin" />} Update Password
+                            </button>
+                        </form>
+                    )}
                 </div>
             )}
 
