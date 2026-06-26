@@ -6,7 +6,7 @@ import { supabase } from "../../lib/supabase";
 import {
     User, Camera, Save, Loader2, Info, Trash2, Plus, X,
     ShieldAlert, Edit, CheckCircle2, Lock, ShieldCheck,
-    Ban, CreditCard, Smartphone, AlertTriangle
+    Ban, CreditCard, Smartphone, AlertTriangle, ChevronDown
 } from "lucide-react";
 
 type TabType = "profile" | "staff" | "password" | "subscription";
@@ -18,6 +18,78 @@ interface StaffMember {
     role: string;
     status: string;
 }
+
+// Custom UI Component for the Filter Dropdown
+const FilterDropdown = ({
+    value,
+    options,
+    onChange,
+    icon: Icon,
+    className,
+    disabled
+}: {
+    value: string,
+    options: { value: string, label: string }[],
+    onChange: (val: string) => void,
+    icon?: any,
+    className?: string,
+    disabled?: boolean
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedLabel = options.find((o) => o.value === value)?.label || value || "Select an option";
+
+    return (
+        <div className="relative w-full" ref={dropdownRef}>
+            <button
+                type="button"
+                disabled={disabled}
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={className || `w-full bg-card border border-border rounded-xl flex items-center justify-between px-4 py-2.5 shadow-sm transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+                <div className="flex items-center gap-2 pr-4 truncate">
+                    {Icon && <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
+                    <span className={`text-sm font-bold truncate ${!value && options[0]?.value === "" ? "text-muted-foreground" : "text-foreground"}`}>
+                        {selectedLabel}
+                    </span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && !disabled && (
+                <div className="absolute top-full left-0 mt-1.5 w-full bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="py-1 max-h-[200px] overflow-y-auto custom-scrollbar">
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-muted ${value === opt.value ? 'bg-primary/10 text-primary font-bold' : 'text-foreground font-medium'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -608,13 +680,28 @@ export default function SettingsPage() {
                             <div className="space-y-1.5"><label className="text-xs font-mono text-muted-foreground">Full Name *</label><input type="text" required value={staffFormData.name} onChange={e => setStaffFormData({ ...staffFormData, name: e.target.value })} className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary" /></div>
                             <div className="space-y-1.5"><label className="text-xs font-mono text-muted-foreground">Business Email *</label><input type="email" required disabled={!!editingStaffId} value={staffFormData.email} onChange={e => setStaffFormData({ ...staffFormData, email: e.target.value })} className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary disabled:opacity-50" /></div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
+                                <div className="space-y-1.5 relative z-20">
                                     <label className="text-xs font-mono text-muted-foreground">System Role</label>
-                                    <select value={staffFormData.role} onChange={e => setStaffFormData({ ...staffFormData, role: e.target.value })} className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary appearance-none disabled:opacity-50" disabled={!!editingStaffId}>
-                                        <option value="STAFF">STAFF</option>
-                                    </select>
+                                    <FilterDropdown
+                                        value={staffFormData.role}
+                                        onChange={(val) => setStaffFormData({ ...staffFormData, role: val })}
+                                        options={[{ value: "STAFF", label: "STAFF" }]}
+                                        disabled={!!editingStaffId}
+                                        className={`w-full px-4 py-2.5 bg-secondary border border-border rounded-xl flex items-center justify-between text-sm text-foreground focus:outline-none focus:border-primary appearance-none ${!!editingStaffId ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary transition-colors cursor-pointer'}`}
+                                    />
                                 </div>
-                                <div className="space-y-1.5"><label className="text-xs font-mono text-muted-foreground">Access Status</label><select value={staffFormData.status} onChange={e => setStaffFormData({ ...staffFormData, status: e.target.value })} className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary appearance-none"><option value="ACTIVE">ACTIVE</option><option value="SUSPENDED">SUSPENDED</option></select></div>
+                                <div className="space-y-1.5 relative z-10">
+                                    <label className="text-xs font-mono text-muted-foreground">Access Status</label>
+                                    <FilterDropdown
+                                        value={staffFormData.status}
+                                        onChange={(val) => setStaffFormData({ ...staffFormData, status: val })}
+                                        options={[
+                                            { value: "ACTIVE", label: "ACTIVE" },
+                                            { value: "SUSPENDED", label: "SUSPENDED" }
+                                        ]}
+                                        className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl flex items-center justify-between text-sm text-foreground focus:outline-none focus:border-primary hover:border-primary transition-colors cursor-pointer"
+                                    />
+                                </div>
                             </div>
                             <div className="pt-4 flex flex-col-reverse sm:flex-row justify-end gap-3">
                                 <button type="button" onClick={() => setIsStaffModalOpen(false)} className="w-full sm:w-auto px-5 py-2.5 sm:py-2 rounded-lg font-bold text-muted-foreground bg-muted hover:bg-muted/80 transition-colors cursor-pointer">Cancel</button>
