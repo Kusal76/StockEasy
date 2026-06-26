@@ -82,10 +82,7 @@ export default function SetPasswordPage() {
 
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                // FIX: Ensure the main 'users' table is marked as ACTIVE
-                await supabase.from('users').update({ status: 'ACTIVE' }).eq('id', user.id);
-
-                // Keep this if you are actively using a secondary staff_profiles table
+                // DB FIX: Only update 'staff_profiles' since 'users' doesn't have a status column
                 await supabase.from('staff_profiles').update({ status: 'ACTIVE' }).eq('id', user.id);
             }
 

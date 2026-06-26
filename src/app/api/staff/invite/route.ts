@@ -44,6 +44,7 @@ export async function POST(req: Request) {
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'https://stock-easy-orpin.vercel.app';
 
+        // 1. Ask Supabase to securely generate the invite link
         const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
             type: 'invite',
             email: staffEmail,
@@ -61,22 +62,35 @@ export async function POST(req: Request) {
             throw new Error(linkError?.message || "Failed to generate secure invite link.");
         }
 
-        // Extract the magic URL!
         const secureInviteLink = linkData.properties.action_link;
 
-        // Forcefully create the profile in the database!
-        const { error: profileError } = await supabaseAdmin.from('users').upsert({
+        // 🚨 DB FIX 1: Insert into 'users' table (No 'status' column, uses 'full_name')
+        const { error: userError } = await supabaseAdmin.from('users').upsert({
             id: linkData.user.id,
             email: staffEmail,
             full_name: staffName,
             role: 'STAFF',
-            shop_id: shopId,
-            status: 'ACTIVE' // Pre-activate them so the login page accepts them
+            shop_id: shopId
         });
 
-        if (profileError) {
-            console.error("Failed to create database profile:", profileError);
+        if (userError) {
+            console.error("Failed to create users profile:", userError);
             throw new Error("Could not create the user profile in the database.");
+        }
+
+        // 🚨 DB FIX 2: Insert into 'staff_profiles' table (Has 'status' column, uses 'name')
+        const { error: staffError } = await supabaseAdmin.from('staff_profiles').upsert({
+            id: linkData.user.id, // Keep the IDs identical for easy linking!
+            email: staffEmail,
+            name: staffName,      // Notice this is 'name', not 'full_name'
+            role: 'STAFF',
+            shop_id: shopId,
+            status: 'PENDING'     // Set to pending until they set their password
+        });
+
+        if (staffError) {
+            console.error("Failed to create staff profile:", staffError);
+            // We won't throw an error here so the email still sends even if this minor table fails
         }
 
         // 2. Offload Email Dispatch to QStash
