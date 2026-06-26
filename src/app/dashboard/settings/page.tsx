@@ -278,7 +278,7 @@ export default function SettingsPage() {
         if (!shopId || !isDirty) return;
 
         if (profileData.contact_number.length !== 10) {
-            alert("Primary contact number must be exactly 10 digits.");
+            alert("Shop's Primary contact number must be exactly 10 digits.");
             return;
         }
 
@@ -839,17 +839,17 @@ export default function SettingsPage() {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Primary Contact Number *</label>
+                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Shop's Primary Contact Number *</label>
                                     <input type="text" inputMode="numeric" pattern="[0-9]{10}" required value={profileData.contact_number} onChange={e => handlePhoneChange(e.target.value, "contact_number")} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono" placeholder="10-digit mobile number" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Alternate Contact Number</label>
+                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Shop's Alternate Contact Number</label>
                                     <input type="text" inputMode="numeric" pattern="[0-9]{10}" value={profileData.alternate_contact_no || ""} onChange={e => handlePhoneChange(e.target.value, "alternate_contact_no")} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors font-mono" placeholder="Optional 10-digit number" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 items-start">
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Business Email Address</label>
+                                    <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Shop's Business Email Address</label>
                                     <input type="email" value={profileData.email_address} onChange={e => setProfileData({ ...profileData, email_address: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-secondary border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors" />
                                 </div>
                                 <div className="space-y-1.5">
