@@ -1145,9 +1145,9 @@ export default function SettingsPage() {
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                                     >
                                         {showPassword.new ? (
-                                            <EyeOff className="w-5 h-5" />
-                                        ) : (
                                             <Eye className="w-5 h-5" />
+                                        ) : (
+                                            <EyeOff className="w-5 h-5" />
                                         )}
                                     </button>
                                 </div>
@@ -1184,9 +1184,9 @@ export default function SettingsPage() {
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                                     >
                                         {showPassword.confirm ? (
-                                            <EyeOff className="w-5 h-5" />
-                                        ) : (
                                             <Eye className="w-5 h-5" />
+                                        ) : (
+                                            <EyeOff className="w-5 h-5" />
                                         )}
                                     </button>
                                 </div>
