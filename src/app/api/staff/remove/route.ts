@@ -16,9 +16,13 @@ export async function POST(req: Request) {
         }
 
         // 1. HARD DELETE: Remove the user entirely from the Supabase Auth system.
-        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(staffAuthId);
+        const { error: authError } =
+            await supabaseAdmin.auth.admin.deleteUser(staffAuthId);
 
-        if (authError) throw new Error("Failed to delete user authentication credentials.");
+        if (authError) {
+            console.error("Failed to delete Auth user:", authError);
+            throw authError;
+        }
 
         // 2. CLEANUP: Delete from your public staff_profiles table
         if (staffProfileId) {
