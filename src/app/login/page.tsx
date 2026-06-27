@@ -129,6 +129,8 @@ function LoginForm() {
         setIsLoading(true);
 
         try {
+            document.cookie = `stockeasy_remember_me=${rememberMe}; path=/; max-age=60; SameSite=Lax; Secure`;
+
             const preCheckRes = await fetch('/api/auth/security', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -279,12 +281,6 @@ function LoginForm() {
                 return;
             }
 
-            if (!rememberMe) {
-                window.addEventListener("beforeunload", () => {
-                    supabase.auth.signOut();
-                });
-            }
-
             routeUser(userRole);
 
         } catch (error: any) {
@@ -308,12 +304,6 @@ function LoginForm() {
             });
 
             if (challengeError) throw challengeError;
-
-            if (!rememberMe) {
-                window.addEventListener("beforeunload", () => {
-                    supabase.auth.signOut();
-                });
-            }
 
             routeUser(pendingRole);
 
@@ -343,12 +333,6 @@ function LoginForm() {
             });
 
             if (challengeError) throw challengeError;
-
-            if (!rememberMe) {
-                window.addEventListener("beforeunload", () => {
-                    supabase.auth.signOut();
-                });
-            }
 
             routeUser(pendingRole);
 
