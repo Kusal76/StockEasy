@@ -129,7 +129,7 @@ function LoginForm() {
         setIsLoading(true);
 
         try {
-            document.cookie = `stockeasy_remember_me=${rememberMe}; path=/; max-age=60; SameSite=Lax; Secure`;
+            document.cookie = `stockeasy_remember_me=${rememberMe}; path=/; SameSite=Lax; Secure`;
 
             const preCheckRes = await fetch('/api/auth/security', {
                 method: 'POST',
@@ -145,6 +145,20 @@ function LoginForm() {
             const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                 email, password,
             });
+
+            if (!rememberMe) {
+                const cookies = document.cookie.split(';');
+                for (const c of cookies) {
+                    const cookieParts = c.split('=');
+                    const cookieName = cookieParts[0].trim();
+                    // Target all Supabase auth cookies
+                    if (cookieName.startsWith('sb-')) {
+                        const cookieValue = cookieParts.slice(1).join('=');
+                        // Rewriting a cookie with NO max-age turns it into a pure Session Cookie!
+                        document.cookie = `${cookieName}=${cookieValue}; path=/; SameSite=Lax; Secure`;
+                    }
+                }
+            }
 
             if (authError || !authData.user) {
                 const failRes = await fetch('/api/auth/security', {
