@@ -110,22 +110,6 @@ export default async function SuperAdminPage() {
                 </div>
             </div>
 
-            {/* Header - Stacks elements cleanly on mobile views */}
-            <div className="flex flex-col sm:flex-row items-start gap-4 border-b border-border pb-6">
-                <div className="p-3 bg-destructive/10 rounded-xl shrink-0 self-start sm:self-center shadow-sm">
-                    <ShieldAlert className="w-6 h-6 sm:w-8 sm:h-8 text-destructive" />
-                </div>
-                <div className="min-w-0 flex-1">
-                    <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">
-                        Super Admin Control Center
-                    </h1>
-                    <p className="text-muted-foreground text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl font-medium">
-                        Global security overrides, administrative audits, and employee management.
-                    </p>
-                </div>
-            </div>
-
-            {/* THE FIX: Restore the correct Client Component */}
             <SuperAdminClientView
                 initialAdmins={safeAdmins}
                 initialLogs={safeLogs}
