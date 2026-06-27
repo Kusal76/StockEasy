@@ -416,14 +416,6 @@ function LoginForm() {
 
                 <div className="w-full max-w-md m-auto bg-card sm:bg-transparent border border-border sm:border-0 rounded-2xl p-5 sm:p-0 animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-sm sm:shadow-none transition-colors">
 
-                    {/* Mobile Logo */}
-                    <div className="flex lg:hidden justify-center mb-6 sm:mb-8 pt-2 sm:pt-0">
-                        <Link href="/" className="inline-block">
-                            <Image src="/Receipt_logo.png" alt="StockEasy Logo" width={130} height={40} className="object-contain block dark:hidden scale-110 sm:scale-125" priority />
-                            <Image src="/StockEasy_logo.png" alt="StockEasy Logo" width={150} height={40} className="object-contain hidden dark:block" priority />
-                        </Link>
-                    </div>
-
                     {!show2FA && !show2FASetup && (
                         <>
                             <div className="flex mb-6 sm:mb-8 border-b border-border">
@@ -435,7 +427,7 @@ function LoginForm() {
                                 </button>
                             </div>
 
-                            <div className="hidden sm:flex flex-col items-center justify-center mb-6">
+                            <div className="flex flex-col items-center justify-center mb-6">
                                 <div className="mb-7">
                                     <Image src="/Receipt_logo.png" alt="StockEasy Logo" width={130} height={40} className="object-contain block dark:hidden scale-125" priority />
                                     <Image src="/StockEasy_logo.png" alt="StockEasy Logo" width={150} height={40} className="object-contain hidden dark:block" priority />
