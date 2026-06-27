@@ -18,10 +18,10 @@ export default async function SuperAdminPage() {
         if (authError) {
             if (authError.status === 429) {
                 return (
-                    <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
-                        <ShieldAlert className="w-12 h-12 text-warning mb-4 animate-pulse" />
-                        <h2 className="text-xl font-bold mb-2">Rate Limit Reached</h2>
-                        <p className="text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4 sm:p-6">
+                        <ShieldAlert className="w-10 h-10 sm:w-12 sm:h-12 text-warning mb-4 animate-pulse" />
+                        <h2 className="text-lg sm:text-xl font-bold mb-2">Rate Limit Reached</h2>
+                        <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-sm">
                             The system is currently cooling down due to high traffic. <br />
                             Please wait 60 seconds and refresh the page.
                         </p>
@@ -93,20 +93,39 @@ export default async function SuperAdminPage() {
     }));
 
     return (
-        <div className="max-w-7xl mx-auto px-6 pb-6 pt-2 space-y-8 animate-in fade-in duration-500">
-            <div className="flex items-center gap-3 border-b border-border pb-6">
-                <div className="p-3 bg-destructive/10 rounded-xl">
-                    <ShieldAlert className="w-8 h-8 text-destructive" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-4 space-y-6 sm:space-y-8 animate-in fade-in duration-500 transition-colors">
+
+            {/* Header - Stacks elements cleanly on mobile views */}
+            <div className="flex flex-col sm:flex-row items-start gap-4 border-b border-border pb-6">
+                <div className="p-3 bg-destructive/10 rounded-xl shrink-0 self-start sm:self-center shadow-sm">
+                    <ShieldAlert className="w-6 h-6 sm:w-8 sm:h-8 text-destructive" />
                 </div>
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Super Admin Control Center</h1>
-                    <p className="text-muted-foreground mt-1">
+                <div className="min-w-0 flex-1">
+                    <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">
+                        Super Admin Control Center
+                    </h1>
+                    <p className="text-muted-foreground text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl font-medium">
                         Global security overrides, administrative audits, and employee management.
                     </p>
                 </div>
             </div>
 
-            {/* Clean, natively typed component call. No red lines, no serialization errors. */}
+            {/* Header - Stacks elements cleanly on mobile views */}
+            <div className="flex flex-col sm:flex-row items-start gap-4 border-b border-border pb-6">
+                <div className="p-3 bg-destructive/10 rounded-xl shrink-0 self-start sm:self-center shadow-sm">
+                    <ShieldAlert className="w-6 h-6 sm:w-8 sm:h-8 text-destructive" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">
+                        Super Admin Control Center
+                    </h1>
+                    <p className="text-muted-foreground text-xs sm:text-sm mt-1 leading-relaxed max-w-2xl font-medium">
+                        Global security overrides, administrative audits, and employee management.
+                    </p>
+                </div>
+            </div>
+
+            {/* THE FIX: Restore the correct Client Component */}
             <SuperAdminClientView
                 initialAdmins={safeAdmins}
                 initialLogs={safeLogs}
