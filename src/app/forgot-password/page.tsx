@@ -1,9 +1,3 @@
-// TODO: BEFORE DEPLOYMENT (Vercel/Netlify)
-// 1. Go to Supabase Dashboard -> Authentication -> URL Configuration
-// 2. Add the production URL (e.g., https://stockeasy.vercel.app/**) to the Redirect URLs
-// 3. Add Supabase ENV variables to Vercel project settings
-
-
 "use client";
 
 import { useState } from "react";
@@ -24,13 +18,31 @@ export default function ForgotPasswordPage() {
         setIsLoading(true);
 
         try {
-            // 1. Create a specialized SSR-compatible browser client
+            // 1. Call your existing API route
+            const checkRes = await fetch('/api/auth/check-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const checkData = await checkRes.json();
+
+            if (!checkRes.ok) {
+                throw new Error("Failed to verify account status.");
+            }
+
+            // 🚨 THE LOGIC FLIP: If the email IS available, it means it's NOT registered!
+            if (checkData.isAvailable === true) {
+                throw new Error("No active account found with this email address.");
+            }
+
+            // 2. Create a specialized SSR-compatible browser client
             const supabaseSSR = createBrowserClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL!,
                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
             );
 
-            // 2. Use THIS client to send the email, so it saves the verifier in your cookies!
+            // 3. Email verified! Send the reset link
             const { error } = await supabaseSSR.auth.resetPasswordForEmail(email, {
                 redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
             });

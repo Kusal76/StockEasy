@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase'; 
+import { createClient } from '@supabase/supabase-js';
+
+// Enabled Admin Client to securely bypass RLS across unauthorized registration views
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(req: Request) {
     try {
@@ -11,47 +16,40 @@ export async function POST(req: Request) {
 
         const normalizedEmail = email.toLowerCase().trim();
 
-        // 1. Check Auth Users (Supabase built-in auth)
-        // Note: Supabase auth.users isn't directly queryable from the anon client, 
-        // but if you are syncing it to a public.users table, check that!
-        const { data: userMatch } = await supabase
+        // 1. Check Platform Admins (Superadmins)
+        const { data: adminMatch } = await supabaseAdmin
+            .from('platform_admins')
+            .select('id')
+            .eq('email', normalizedEmail)
+            .maybeSingle();
+
+        if (adminMatch) {
+            return NextResponse.json({ isAvailable: false, reason: "Account already exists as a Platform Administrator." });
+        }
+
+        // 2. Check Auth Users / Core Profiles (Owners)
+        const { data: userMatch } = await supabaseAdmin
             .from('users')
             .select('id')
             .eq('email', normalizedEmail)
             .maybeSingle();
 
-        if (userMatch) return NextResponse.json({ isAvailable: false, reason: "Account already exists." });
+        if (userMatch) {
+            return NextResponse.json({ isAvailable: false, reason: "Account already exists." });
+        }
 
-        // 2. Check Staff Profiles
-        const { data: staffMatch } = await supabase
+        // 3. Check Staff Profiles
+        const { data: staffMatch } = await supabaseAdmin
             .from('staff_profiles')
             .select('id')
             .eq('email', normalizedEmail)
             .maybeSingle();
 
-        if (staffMatch) return NextResponse.json({ isAvailable: false, reason: "Email is registered as a staff member." });
+        if (staffMatch) {
+            return NextResponse.json({ isAvailable: false, reason: "Email is registered as a staff member." });
+        }
 
-        // 3. Check Shop Primary Emails (if your shops table tracks an email)
-        const { data: shopMatch } = await supabase
-            .from('shops')
-            .select('id')
-            .eq('contact_email', normalizedEmail) // Adjust column name based on your DB
-            .maybeSingle();
-
-        if (shopMatch) return NextResponse.json({ isAvailable: false, reason: "Email is already tied to a registered pharmacy." });
-
-        /* * OPTIONAL: If you REALLY want to block dealers globally, uncomment this.
-         * (Not recommended for multi-tenant SaaS as explained above)
-         *
-         * const { data: dealerMatch } = await supabase
-         * .from('dealers')
-         * .select('id')
-         * .eq('email', normalizedEmail)
-         * .maybeSingle();
-         * if (dealerMatch) return NextResponse.json({ isAvailable: false, reason: "Email is used by a dealer." });
-         */
-
-        // If it passes all checks, it's good to go!
+        // If it passes all checks, the email is completely available
         return NextResponse.json({ isAvailable: true });
 
     } catch (error: any) {
