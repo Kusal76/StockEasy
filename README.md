@@ -2,11 +2,12 @@
 
 > A full-stack, multi-tenant SaaS platform built to modernize pharmacy operations through intelligent inventory management, real-time analytics, secure role-based access control, and a smart Point of Sale (POS) system powered by FEFO (First-Expire-First-Out) inventory optimization.
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js\&logoColor=white)
-![React](https://img.shields.io/badge/React-18-blue?logo=react\&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript\&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_&_Auth-3ECF8E?logo=supabase\&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css\&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-18-blue?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_&_Auth-3ECF8E?logo=supabase&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)
+![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?logo=redis&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
@@ -17,8 +18,7 @@
 ---
 
 ## 🌐 Live Demo
-* **Live Application:** [https://stockeasy.vercel.app](https://stockeasy.vercel.app) *(Replace with your actual link)*
-* **Demo Video / Walkthrough:** [YouTube Link Here] *(Optional)*
+* **Live Application:** https://stock-easy-orpin.vercel.app/
   
 ---
 
@@ -31,6 +31,9 @@
 * Implemented secure role-based access control supporting Superadmin, Owner, and Staff workflows.
 * Built a dynamic POS system with automated billing, invoice generation, and inventory synchronization.
 * Deployed a cloud-native architecture optimized for Vercel and Supabase.
+* Implemented Two-Factor Authentication (2FA/TOTP) enforcing AAL2 (Authenticator Assurance Level 2) sessions for critical administrative and owner actions.
+* Integrated Upstash Redis for lightning-fast tenant blacklisting and rate-limiting to prevent brute-force login attempts.
+* Architected a serverless background job queue using Upstash QStash to handle asynchronous webhook events like approval/rejection transactional emails.
 
 ---
 
@@ -193,28 +196,28 @@ Realtime synchronization ensures dashboards remain updated without manual refres
 
 ---
 
-## 🔐 Authentication & RBAC
+## 🔐 Authentication & Advanced Security
+
+* **Multi-Factor Authentication (MFA):** Mandatory TOTP authenticator app verification for Superadmins and customizable 2FA requirements for pharmacy Owners.
+* **Smart Session Management:** Secure PKCE flow with a custom Next.js middleware implementation for transient vs. 30-day persistent cookie lifetimes.
+* **Instant Tenant Blacklisting:** Redis-backed edge caching to instantly lock out suspended pharmacies before they reach the main database.
 
 Supported roles:
 
 ### Superadmin
-
-* Tenant management
+* Platform oversight and tenant approval/rejection workflows
 * Support ticket management
-* Platform oversight
+* Global maintenance mode and system access controls
 
 ### Owner
-
-* Inventory management
-* Staff management
-* Financial reporting
-* Business configuration
+* Inventory and staff management
+* Financial reporting and business configuration
+* Complete pharmacy oversight
 
 ### Staff
-
 * Point of Sale operations
 * Inventory search
-* Limited operational access
+* Limited operational access via Owner delegation
 
 ---
 
@@ -260,18 +263,19 @@ Client (Browser)
 └── Supabase Browser Client
       │
       ▼
-Next.js App Router
+Next.js App Router & Edge Middleware
 │
-├── Server Actions
-├── Route Handlers
-├── Middleware
-└── Authentication Layer
+├── Authentication & Session Interceptors
+├── Upstash Redis (Rate Limiting & Blacklist Cache)
+├── Server Actions & Route Handlers
+│     │
+│     └── Upstash QStash (Background Email Job Queue)
       │
       ▼
 Supabase Platform
 │
-├── PostgreSQL Database
-├── Authentication
+├── PostgreSQL Database (RLS Secured)
+├── Authentication (MFA & Identity)
 ├── Realtime Engine
 └── Storage
 ```
@@ -292,6 +296,12 @@ Supabase Platform
 
 * Next.js Server Actions
 * Next.js Route Handlers
+
+## Infrastructure & Tooling
+
+* Upstash Redis (Caching & Edge Security)
+* Upstash QStash (Serverless Message Queuing)
+* Resend (Transactional Emails)
 
 ## Database
 
@@ -463,86 +473,85 @@ Supabase Realtime channels automatically synchronize dashboard metrics and inven
 
 ```text
 stockeasy/
-│
-├── public/                           # Static assets, images, logos
+├── public/
+│   ├── screenshots/
+│   ├── Receipt_logo.png
+│   └── StockEasy_logo.png
 │
 ├── src/
+│   ├── actions/
+│   │   └── admin.ts
 │   │
-│   ├── app/                          # Next.js App Router
+│   ├── app/
+│   │   ├── admin/
+│   │   │   ├── analytics/
+│   │   │   ├── settings/
+│   │   │   ├── shops/
+│   │   │   ├── super-admin/
+│   │   │   ├── support/
+│   │   │   └── verification/
 │   │   │
-│   │   ├── admin/                    # Superadmin portal
-│   │   │   ├── support management
-│   │   │   ├── ticket resolution
-│   │   │   └── platform administration
+│   │   ├── api/
+│   │   │   ├── admin/
+│   │   │   ├── auth/
+│   │   │   ├── chat/
+│   │   │   ├── emails/
+│   │   │   ├── inventory/
+│   │   │   ├── owner/
+│   │   │   ├── razorpay/
+│   │   │   ├── staff/
+│   │   │   ├── system/
+│   │   │   ├── tickets/
+│   │   │   └── webhooks/
 │   │   │
-│   │   ├── api/                      # Route Handlers / Server APIs
+│   │   ├── auth/
+│   │   ├── dashboard/
+│   │   │   ├── ai/
+│   │   │   ├── analytics/
+│   │   │   ├── dealers/
+│   │   │   ├── history/
+│   │   │   ├── inventory/
+│   │   │   ├── medicines/
+│   │   │   ├── sell/
+│   │   │   ├── settings/
+│   │   │   └── stock-entry/
 │   │   │
-│   │   ├── auth/                     # Authentication utilities
-│   │   ├── login/                    # Login page
-│   │   ├── register/                 # User registration
-│   │   ├── forgot-password/          # Password recovery flow
-│   │   ├── set-password/             # Initial password setup
-│   │   ├── update-password/          # Password reset page
-│   │   ├── verify-invite/            # Invitation verification
-│   │   │
-│   │   ├── dashboard/                # Main pharmacy workspace
-│   │   │   ├── POS
-│   │   │   ├── Inventory
-│   │   │   ├── Analytics
-│   │   │   └── Billing
-│   │   │
-│   │   ├── support/                  # Tenant support portal
-│   │   ├── privacy/                  # Privacy policy page
-│   │   ├── terms/                    # Terms and conditions
-│   │   │
-│   │   ├── favicon.ico
+│   │   ├── forgot-password/
+│   │   ├── login/
+│   │   ├── privacy/
+│   │   ├── register/
+│   │   ├── support/
+│   │   ├── terms/
+│   │   ├── update-password/
+│   │   ├── verify-invite/
 │   │   ├── globals.css
 │   │   ├── layout.tsx
-│   │   └── page.tsx                  # Landing page
-│   │
-│   ├── components/
-│   │   │
-│   │   ├── landing/                  # Landing page UI sections
-│   │   ├── ui/                       # Shared UI components
-│   │   │
-│   │   ├── header.tsx
-│   │   ├── hero-section.tsx
-│   │   ├── features-section.tsx
-│   │   ├── how-it-works.tsx
-│   │   ├── pricing-section.tsx
-│   │   ├── faq-section.tsx
-│   │   ├── footer.tsx
-│   │   │
-│   │   ├── Sidebar.tsx              # Dashboard navigation
-│   │   ├── DashboardHeader.tsx      # Dashboard header
-│   │   │
-│   │   ├── RealtimeAuthGuard.tsx    # Session validation
-│   │   ├── ShopGatekeeper.tsx       # Shop-level authorization
-│   │   │
-│   │   ├── theme-provider.tsx
-│   │   ├── theme-toggle.tsx
-│   │   └── video-modal.tsx
+│   │   └── page.tsx
 │   │
 │   ├── lib/
-│   │   └── supabase.ts              # Supabase client configuration
+│   │   ├── redis.ts
+│   │   ├── rate-limiter.ts
+│   │   ├── supabase.ts
+│   │   ├── supabase-admin.ts
+│   │   ├── supabase-server.ts
+│   │   └── utils.ts
 │   │
-│   └── proxy.ts                     # Middleware / request handling
-│
-├── .env.local                       # Environment variables
-├── AGENTS.md                        # AI agent instructions
-├── CLAUDE.md                        # Claude project context
+│   ├── components/
+│   │   ├── landing/
+│   │   ├── ui/
+│   │   ├── DashboardHeader.tsx
+│   │   ├── Sidebar.tsx
+│   │   ├── ShopGatekeeper.tsx
+│   │   └── ...
+│   │
+│   └── proxy.ts
 │
 ├── package.json
-├── package-lock.json
-│
-├── next.config.ts
-├── tailwind.config.js
-├── postcss.config.mjs
 ├── tsconfig.json
+├── next.config.ts
 ├── eslint.config.mjs
-├── vercel.json
-│
-└── README.md
+├── README.md
+└── ...
 ```
 ### Architectural Organization
 
@@ -583,50 +592,87 @@ npm install
 
 ## ⚙️ Environment Variables
 
+## Environment Variables
+
+## ⚙️ Environment Variables
+
+Create a `.env.local` file in the project root and add the following variables:
+
 | Variable | Description | Required |
-|-----------|-------------|----------|
+|----------|-------------|:--------:|
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | ✅ Yes |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase public anonymous key | ✅ Yes |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase admin bypass key (Server-side only) | ✅ Yes |
-| `RESEND_API_KEY` | API key for transactional emails | ✅ Yes |
-| `RAZORPAY_KEY_SECRET` | Secret key for subscription payments | ⚪ Optional |
-| `GEMINI_API_KEY` | API key for AI-powered search and LLM integrations | ⚪ Optional |
-| `CRON_SECRET` | Secret key used to secure scheduled jobs and automated reporting endpoints | ⚪ Optional |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (Server-side only) | ✅ Yes |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous/public API key | ✅ Yes |
+| `GEMINI_API_KEY` | Google Gemini API key for AI features | ✅ Yes |
+| `RAZORPAY_KEY_SECRET` | Razorpay secret key for payment verification | ✅ Yes |
+| `RESEND_API_KEY` | Resend API key for sending transactional emails | ✅ Yes |
+| `CRON_SECRET` | Secret token to secure scheduled/cron jobs | ✅ Yes |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST endpoint | ✅ Yes |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST authentication token | ✅ Yes |
+| `QSTASH_TOKEN` | Upstash QStash API token | ✅ Yes |
+| `QSTASH_CURRENT_SIGNING_KEY` | Current signing key used to verify QStash webhook requests | ✅ Yes |
+| `QSTASH_NEXT_SIGNING_KEY` | Next signing key for QStash webhook signature rotation | ✅ Yes |
+| `NEXT_PUBLIC_APP_URL` | Public URL of the deployed application | ✅ Yes |
+| `QSTASH_URL` | Upstash QStash base URL | ✅ Yes |
 
-Create a `.env.local` file in the project root:
-
-```env
 ### Example `.env.local`
 
 ```env
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-
+# Resend
 RESEND_API_KEY=your_resend_api_key
 
-RAZORPAY_KEY_SECRET=your_razorpay_secret
+# Razorpay
+RAZORPAY_KEY_SECRET=your_razorpay_secret_key
 
+# Google Gemini
 GEMINI_API_KEY=your_gemini_api_key
 
+# Cron
 CRON_SECRET=your_cron_secret
+
+# Upstash Redis
+UPSTASH_REDIS_REST_URL=your_upstash_redis_rest_url
+UPSTASH_REDIS_REST_TOKEN=your_upstash_redis_rest_token
+
+# Upstash QStash
+QSTASH_TOKEN=your_qstash_token
+QSTASH_CURRENT_SIGNING_KEY=your_qstash_current_signing_key
+QSTASH_NEXT_SIGNING_KEY=your_qstash_next_signing_key
+QSTASH_URL=[https://qstash.upstash.io](https://qstash.upstash.io)
+
+# Application
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+---
+
+> **⚠️ Security Notice**
+>
+> - Never commit `.env.local` to version control.
+> - Never expose service role keys, API secrets, or production credentials.
+> - Ensure `.env.local` is included in your `.gitignore`.
+
+---
+
+## Run Locally
+
+Install the project dependencies:
+
+```bash
+npm install
 ```
 
-> ⚠️ Never commit `.env.local` to version control.
-> Keep all service role keys, API secrets, and production credentials private.
-```
-
-> Never commit `.env.local` to version control.
-> Never expose service role keys, API secrets, or production credentials.
-
-### Start Development Server
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-Application URL:
+Open your browser and visit:
 
 ```text
 http://localhost:3000
@@ -762,6 +808,10 @@ Implemented PostgreSQL Row Level Security policies based on `shop_id`.
 
 Integrated Supabase Realtime subscriptions for live dashboard updates.
 
+### Challenge 4: Zero-Trust Security & Background Processing
+**Problem:** Administrative actions like rejecting a tenant required safely deleting user authentication records, updating database rows, and sending emails without blocking the main UI thread. Furthermore, suspended accounts needed to be blocked at the edge before hitting the main database.
+**Solution:** Built an event-driven architecture using Upstash QStash to offload transactional emails to background workers. To secure the perimeter, I implemented a custom Next.js middleware interceptor combined with Upstash Redis to instantly validate blacklisted shop IDs during the login handshake, while strictly enforcing AAL2 (TOTP) session elevations for high-clearance administrators.
+
 ---
 
 ## 🗺️ Product Roadmap
@@ -834,7 +884,7 @@ See the `LICENSE` file for complete details.
 
 GitHub: https://github.com/Kusal76
 
-LinkedIn: https://linkedin.com/in/your-linkedin-profile
+LinkedIn: https://www.linkedin.com/in/kusal-dey-b938a0241
 
 ---
 
