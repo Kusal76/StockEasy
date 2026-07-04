@@ -12,23 +12,46 @@ export async function POST(req: Request) {
         // 1. Security Check: Ensure the user triggering this is an Admin (Implement your auth check here)
 
         // 2. Extract Data (The Snapshot Process)
-        // Fetch all critical tables you want to back up
-        const { data: settingsData, error: settingsError } = await supabaseAdmin.from('platform_settings').select('*');
-        const { data: usersData, error: usersError } = await supabaseAdmin.from('users').select('*');
-        // const { data: shopsData } = await supabaseAdmin.from('shops').select('*'); // Add more as your app grows!
-
-        if (settingsError || usersError) throw new Error("Failed to extract database rows.");
+        // Fetch all critical tables you want to back up concurrently for speed
+        const [
+            { data: settingsData },
+            { data: usersData },
+            { data: shopsData },
+            { data: inventoryData },
+            { data: billsData },
+            { data: billItemsData },
+            { data: supportTicketsData },
+            { data: platformAdminsData },
+            { data: auditLogsData }
+        ] = await Promise.all([
+            supabaseAdmin.from('platform_settings').select('*'),
+            supabaseAdmin.from('users').select('*'),
+            supabaseAdmin.from('shops').select('*'),
+            supabaseAdmin.from('inventory').select('*'),
+            supabaseAdmin.from('bills').select('*'),
+            supabaseAdmin.from('bill_items').select('*'),
+            supabaseAdmin.from('support_tickets').select('*'),
+            supabaseAdmin.from('platform_admins').select('*'),
+            supabaseAdmin.from('admin_audit_logs').select('*')
+        ]);
 
         // 3. Package the data into a single JSON structure
         const dbSnapshot = {
             metadata: {
                 environment: "production",
                 timestamp: new Date().toISOString(),
-                total_tables_backed_up: 2
+                total_tables_backed_up: 9
             },
             tables: {
                 platform_settings: settingsData,
-                users: usersData
+                users: usersData,
+                shops: shopsData,
+                inventory: inventoryData,
+                bills: billsData,
+                bill_items: billItemsData,
+                support_tickets: supportTicketsData,
+                platform_admins: platformAdminsData,
+                admin_audit_logs: auditLogsData
             }
         };
 

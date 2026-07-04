@@ -26,13 +26,46 @@ export async function GET(req: Request) {
             return NextResponse.json({ message: "Automated backups are currently disabled in Admin settings." });
         }
 
-        // 3. RUN THE BACKUP ENGINE (Same as our manual script)
-        const { data: settingsData } = await supabaseAdmin.from('platform_settings').select('*');
-        const { data: usersData } = await supabaseAdmin.from('users').select('*');
+        // 3. RUN THE BACKUP ENGINE
+        const [
+            { data: settingsData },
+            { data: usersData },
+            { data: shopsData },
+            { data: inventoryData },
+            { data: billsData },
+            { data: billItemsData },
+            { data: supportTicketsData },
+            { data: platformAdminsData },
+            { data: auditLogsData }
+        ] = await Promise.all([
+            supabaseAdmin.from('platform_settings').select('*'),
+            supabaseAdmin.from('users').select('*'),
+            supabaseAdmin.from('shops').select('*'),
+            supabaseAdmin.from('inventory').select('*'),
+            supabaseAdmin.from('bills').select('*'),
+            supabaseAdmin.from('bill_items').select('*'),
+            supabaseAdmin.from('support_tickets').select('*'),
+            supabaseAdmin.from('platform_admins').select('*'),
+            supabaseAdmin.from('admin_audit_logs').select('*')
+        ]);
 
         const dbSnapshot = {
-            metadata: { type: "automated_nightly", timestamp: new Date().toISOString() },
-            tables: { platform_settings: settingsData, users: usersData }
+            metadata: {
+                type: "automated_nightly",
+                timestamp: new Date().toISOString(),
+                total_tables_backed_up: 9
+            },
+            tables: {
+                platform_settings: settingsData,
+                users: usersData,
+                shops: shopsData,
+                inventory: inventoryData,
+                bills: billsData,
+                bill_items: billItemsData,
+                support_tickets: supportTicketsData,
+                platform_admins: platformAdminsData,
+                admin_audit_logs: auditLogsData
+            }
         };
 
         const fileName = `nightly-backup-${new Date().toISOString().split('T')[0]}.json`;

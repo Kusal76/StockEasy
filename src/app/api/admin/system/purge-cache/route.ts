@@ -1,12 +1,28 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { createClient } from '@/app/lib/supabase-server';
+import { supabaseAdmin } from '@/app/lib/supabase-admin';
 
 export async function POST(req: Request) {
     try {
-        // 1. In a production app, you would verify the user's admin role here.
+        // --- 🚨 SECURITY CHECK ---
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
 
-        // 2. Clear Next.js server-side data & layout caches globally
-        // Passing "/" with "layout" flushes the entire site cache tree
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const { data: profile } = await supabaseAdmin
+            .from("platform_admins")
+            .select("role, is_active")
+            .eq("id", user.id)
+            .single();
+
+        if (!profile || profile.role !== "SUPERADMIN" || !profile.is_active) {
+            return NextResponse.json({ error: "Forbidden: Superadmin clearance required." }, { status: 403 });
+        }
+        // -------------------------
+
+        // Clear Next.js caches globally
         revalidatePath('/', 'layout');
 
         return NextResponse.json({

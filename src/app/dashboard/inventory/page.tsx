@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSearchParams } from "next/navigation";
-import { Search, Loader2, Trash2, Edit, AlertTriangle, X, Save, PackageSearch } from "lucide-react"; // Added PackageSearch for empty state
+import { Search, Loader2, Trash2, Edit, AlertTriangle, X, Save, PackageSearch } from "lucide-react";
 
 interface InventoryItem {
     id: string;
@@ -222,13 +222,14 @@ export default function InventoryOverviewPage() {
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Expiry Date</label>
+                                <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Expiry Date (MM/YYYY)</label>
                                 <input
-                                    type="date" required
-                                    value={editingItem.expiry_date.split('T')[0]}
-                                    onChange={e => setEditingItem({ ...editingItem, expiry_date: e.target.value })}
-                                    className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
-                                    style={{ colorScheme: 'dark' }}
+                                    type="month" required
+                                    // Extract just the YYYY-MM part from the database's full date string
+                                    value={editingItem.expiry_date ? editingItem.expiry_date.substring(0, 7) : ""}
+                                    // Append -01 so it saves properly to the database as a complete valid date
+                                    onChange={e => setEditingItem({ ...editingItem, expiry_date: `${e.target.value}-01` })}
+                                    className="w-full px-4 py-2.5 sm:py-3 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary transition-colors [color-scheme:light] dark:[color-scheme:dark]"
                                 />
                             </div>
                             <div className="pt-2 sm:pt-4 flex flex-col-reverse sm:flex-row gap-3">
