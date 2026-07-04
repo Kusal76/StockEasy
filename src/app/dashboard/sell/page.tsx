@@ -154,9 +154,6 @@ export default function SellPage() {
 
             setIsSearching(true);
             try {
-                // --- 1. COMPOSITION & BRAND SEARCH (The Secondary Helper) ---
-                // We query BOTH medicine_name and generic_name so pharmacists can 
-                // find identical compositions across different brands if they need to.
                 const { data, error } = await supabase
                     .from('inventory')
                     .select('id, medicine_name, generic_name, batch_number, quantity, mrp, expiry_date')
@@ -171,36 +168,49 @@ export default function SellPage() {
 
                 const results = data || [];
 
-                // --- 2. BRAND-STRICT FEFO LOGIC (The Practical Rule) ---
-                // We strictly group by the exact medicine_name. This prevents the system 
-                // from telling the pharmacist to substitute a different brand just because 
-                // it expires earlier, which could violate prescription compliance.
+                // --- FEFO LOGIC (EXCLUDING EXPIRED BATCHES) ---
                 const recommended = new Set<string>();
                 const batchCounts = new Map<string, number>();
 
+                const todayAtMidnight = new Date();
+                todayAtMidnight.setHours(0, 0, 0, 0);
+
+                // 1. Count ONLY valid (non-expired) batches
                 results.forEach(item => {
-                    const key = item.medicine_name.toLowerCase().trim();
-                    batchCounts.set(key, (batchCounts.get(key) || 0) + 1);
+                    const isExpired = new Date(item.expiry_date) < todayAtMidnight;
+                    if (!isExpired) {
+                        const key = item.medicine_name.toLowerCase().trim();
+                        batchCounts.set(key, (batchCounts.get(key) || 0) + 1);
+                    }
                 });
 
-                const seen = new Set<string>();
+                // 2. Assign recommendation ONLY to the earliest valid batch
+                const seenValid = new Set<string>();
                 results.forEach(item => {
+                    const isExpired = new Date(item.expiry_date) < todayAtMidnight;
                     const key = item.medicine_name.toLowerCase().trim();
-                    if (!seen.has(key)) {
-                        seen.add(key);
+
+                    if (!isExpired && !seenValid.has(key)) {
+                        seenValid.add(key);
                         if (batchCounts.get(key)! > 1) {
                             recommended.add(item.id);
                         }
                     }
                 });
 
-                // --- 3. UX Polish ---
-                // Bubble recommended "Sell First" items to the very top
+                // Bubble recommended items to the top, but keep expired items visible at the bottom
                 results.sort((a, b) => {
+                    const aExp = new Date(a.expiry_date) < todayAtMidnight;
+                    const bExp = new Date(b.expiry_date) < todayAtMidnight;
+
+                    if (!aExp && bExp) return -1;
+                    if (aExp && !bExp) return 1;
+
                     const aRec = recommended.has(a.id);
                     const bRec = recommended.has(b.id);
                     if (aRec && !bRec) return -1;
                     if (!aRec && bRec) return 1;
+
                     return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
                 });
 
@@ -244,6 +254,10 @@ export default function SellPage() {
     }, [customerPhone, shopId, customerName]);
 
     const addToCart = (item: InventoryItem) => {
+        // Double check block just in case
+        const isExpired = new Date(item.expiry_date) < new Date(new Date().setHours(0, 0, 0, 0));
+        if (isExpired) return;
+
         setCart(prev => {
             const existing = prev.find(i => i.id === item.id);
             if (existing) {
@@ -283,7 +297,7 @@ export default function SellPage() {
     const discountAmount = (cartSubTotal * discountVal) / 100;
     const rawTotal = cartSubTotal - discountAmount;
 
-    // Round to the nearest whole number (e.g. 43.20 -> 43.00)
+    // Round to the nearest whole number
     const cartGrandTotal = Math.round(rawTotal);
     const roundOffAmount = cartGrandTotal - rawTotal;
 
@@ -543,21 +557,43 @@ export default function SellPage() {
                     ) : (
                         <div className="space-y-3">
                             {inventory.map((item) => {
-                                const isRecommended = fefoRecommendedIds.has(item.id);
+                                // --- SECURE EXPIRY DATE CHECKING ---
+                                const expDate = new Date(item.expiry_date);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0); // Normalize to midnight
+
+                                const isExpired = expDate < today;
+
+                                const thirtyDaysFromNow = new Date(today);
+                                thirtyDaysFromNow.setDate(today.getDate() + 30);
+                                const isNearExpiry = !isExpired && expDate <= thirtyDaysFromNow;
+
+                                const isRecommended = fefoRecommendedIds.has(item.id) && !isExpired;
 
                                 return (
                                     <div
                                         key={item.id}
-                                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-background border ${isRecommended ? 'border-amber-500 ring-1 ring-amber-500/20 shadow-md' : 'border-border hover:border-border/80 hover:shadow-sm'} rounded-xl transition-all duration-200`}
+                                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl transition-all duration-200 ${isExpired
+                                                ? 'bg-destructive/5 border border-destructive/20 opacity-75 grayscale-[30%]'
+                                                : isRecommended
+                                                    ? 'bg-background border border-amber-500 ring-1 ring-amber-500/20 shadow-md'
+                                                    : 'bg-background border border-border hover:border-border/80 hover:shadow-sm'
+                                            }`}
                                     >
                                         <div>
                                             <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                                                <h3 className="font-bold text-foreground text-base md:text-lg">{item.medicine_name}</h3>
-                                                {isRecommended && (
+                                                <h3 className={`font-bold text-base md:text-lg ${isExpired ? 'text-destructive line-through decoration-destructive/40' : 'text-foreground'}`}>
+                                                    {item.medicine_name}
+                                                </h3>
+                                                {isExpired ? (
+                                                    <span className="bg-destructive text-destructive-foreground text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                                                        <AlertCircle className="w-3 h-3" /> EXPIRED - DO NOT SELL
+                                                    </span>
+                                                ) : isRecommended ? (
                                                     <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
                                                         <AlertTriangle className="w-3 h-3" /> Sell First
                                                     </span>
-                                                )}
+                                                ) : null}
                                             </div>
 
                                             {item.generic_name && (
@@ -566,19 +602,32 @@ export default function SellPage() {
                                                 </p>
                                             )}
 
+                                            {/* WARNING FOR NEAR EXPIRY */}
+                                            {!isExpired && isNearExpiry && (
+                                                <div className="mt-1.5 inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded text-amber-600">
+                                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                                    <span className="text-[10px] font-bold">Ensure patient course completes before expiry</span>
+                                                </div>
+                                            )}
+
                                             <div className="flex flex-wrap gap-3 md:gap-4 text-xs font-mono text-muted-foreground mt-2">
-                                                <span>Batch: <span className="text-foreground font-semibold">{item.batch_number}</span></span>
-                                                <span>Stock: <span className="text-foreground font-semibold">{item.quantity}</span></span>
-                                                <span>Exp: <span className={isRecommended ? "text-amber-500 font-bold" : "text-foreground font-semibold"}>{item.expiry_date}</span></span>
+                                                <span>Batch: <span className={isExpired ? "text-destructive font-semibold" : "text-foreground font-semibold"}>{item.batch_number}</span></span>
+                                                <span>Stock: <span className={isExpired ? "text-destructive font-semibold" : "text-foreground font-semibold"}>{item.quantity}</span></span>
+                                                <span>Exp: <span className={isExpired ? "text-destructive font-bold" : isRecommended || isNearExpiry ? "text-amber-500 font-bold" : "text-foreground font-semibold"}>{item.expiry_date}</span></span>
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-border">
-                                            <span className="font-bold text-primary text-lg md:text-xl tracking-tight">₹{item.mrp.toFixed(2)}</span>
+                                            <span className={`font-bold text-lg md:text-xl tracking-tight ${isExpired ? 'text-destructive/60' : 'text-primary'}`}>
+                                                ₹{item.mrp.toFixed(2)}
+                                            </span>
                                             <button
                                                 onClick={() => addToCart(item)}
-                                                className={`p-3 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-center ${isRecommended
-                                                    ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-md hover:shadow-lg hover:-translate-y-0.5'
-                                                    : 'bg-secondary text-primary border border-border hover:bg-muted hover:border-primary/50'
+                                                disabled={isExpired}
+                                                className={`p-3 rounded-xl transition-all duration-200 flex items-center justify-center ${isExpired
+                                                        ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+                                                        : isRecommended
+                                                            ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer'
+                                                            : 'bg-secondary text-primary border border-border hover:bg-muted hover:border-primary/50 cursor-pointer'
                                                     }`}
                                             >
                                                 <Plus className="w-5 h-5" />
